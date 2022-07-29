@@ -1,0 +1,6 @@
+Test/
+venv/
+.venv/
+*.xlsx
+.vscode/
+server_private.md
