@@ -454,7 +454,7 @@ cursor = cnxn.cursor()
 localcase = True
 
 if localcase:
-    Path('Testpi').mkdir(parents=True, exist_ok=True)
+    Path('Test').mkdir(parents=True, exist_ok=True)
     #wrapper_to_folder(cursor,"Test","1296")
     #wrapper_to_folder(cursor,"Test","1302")
     #wrapper_to_folder(cursor,"Test","1346")
