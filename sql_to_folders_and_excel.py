@@ -438,58 +438,65 @@ def wrapper_to_folder(cursor,input_folder,input_wrapper):
         wbout.save(folder_exercise+'/exercise.xlsx')
         wbout.close()
 
-ser_file = open('server_private.md','r')
-info = []
-for i in ser_file:
-    info.append(i.split()[-1].replace("'",''))
-[server,database,username,password] = info
 
-#connect to the calst database
+def main():
+    ser_file = open('server_private.md','r')
+    info = []
+    for i in ser_file:
+        info.append(i.split()[-1].replace("'",''))
+    [server,database,username,password] = info
 
-cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
-cursor = cnxn.cursor()
+    #connect to the calst database
 
-#wrapper corresponds to a second levels structures like lessons 1, 2,3 
+    cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
+    cursor = cnxn.cursor()
 
-localcase = True
+    #wrapper corresponds to a second levels structures like lessons 1, 2,3 
 
-if localcase:
-    Path('Test').mkdir(parents=True, exist_ok=True)
-    #wrapper_to_folder(cursor,"Test","1296")
-    #wrapper_to_folder(cursor,"Test","1302")
-    #wrapper_to_folder(cursor,"Test","1346")
-    #wrapper_to_folder(cursor,"Test","156")
-    wrapper_to_folder(cursor,"Test","1336")
-else:  
-    course = 'Greek'
-    sqlcom = "SELECT * FROM [CalstContent].[dbo].[Wrappers] where [Name] = '"+course+"EntryPoint'"
-    cursor.execute(sqlcom)  
-    data = [list(i) for i in cursor.fetchall()] 
-    folder_level_0 = course+'_course'
-    Path(folder_level_0).mkdir(parents=True, exist_ok=True)
-    wrapper(cursor, data[0], folder_level_0)
-    sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(data[0][0])
-    cursor.execute(sqlcom)  
-    data = [list(i) for i in cursor.fetchall()]
-    for i in data:
-        folder_level_1 = folder_level_0+'/'+str(i[2])
-        Path(folder_level_1).mkdir(parents=True, exist_ok=True)
-        wrapper(cursor,i,folder_level_1)
-        sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(i[0])
+    localcase = True
+
+    if localcase:
+        Path('Test').mkdir(parents=True, exist_ok=True)
+        #wrapper_to_folder(cursor,"Test","1296")
+        #wrapper_to_folder(cursor,"Test","1302")
+        #wrapper_to_folder(cursor,"Test","1346")
+        #wrapper_to_folder(cursor,"Test","156")
+        wrapper_to_folder(cursor,"Test","1336")
+    else:  
+        course = 'Greek'
+        sqlcom = "SELECT * FROM [CalstContent].[dbo].[Wrappers] where [Name] = '"+course+"EntryPoint'"
         cursor.execute(sqlcom)  
-        ls = [list(i) for i in cursor.fetchall()] 
-        
-        for j in ls:
-            folder_level_2 = folder_level_1+'/'+str(j[2])
-            Path(folder_level_2).mkdir(parents=True, exist_ok=True)
-            print(folder_level_2)
-            wrapper_to_folder(cursor,folder_level_2,str(j[0]))
-            sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(j[0])
+        data = [list(i) for i in cursor.fetchall()] 
+        folder_level_0 = course+'_course'
+        Path(folder_level_0).mkdir(parents=True, exist_ok=True)
+        wrapper(cursor, data[0], folder_level_0)
+        sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(data[0][0])
+        cursor.execute(sqlcom)  
+        data = [list(i) for i in cursor.fetchall()]
+        for i in data:
+            folder_level_1 = folder_level_0+'/'+str(i[2])
+            Path(folder_level_1).mkdir(parents=True, exist_ok=True)
+            wrapper(cursor,i,folder_level_1)
+            sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(i[0])
             cursor.execute(sqlcom)  
-            level_3 = [list(i) for i in cursor.fetchall()] 
+            ls = [list(i) for i in cursor.fetchall()] 
+            
+            for j in ls:
+                folder_level_2 = folder_level_1+'/'+str(j[2])
+                Path(folder_level_2).mkdir(parents=True, exist_ok=True)
+                print(folder_level_2)
+                wrapper_to_folder(cursor,folder_level_2,str(j[0]))
+                sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(j[0])
+                cursor.execute(sqlcom)  
+                level_3 = [list(i) for i in cursor.fetchall()] 
 
-            for entry in level_3:          
-                folder_level_3 = folder_level_2+'/'+str(entry[2]).replace(":","_colon").replace("?","_qm_").replace('/','_backslash_')
-                Path(folder_level_3).mkdir(parents=True, exist_ok=True)
-                print(folder_level_3)
-                wrapper_to_folder(cursor,folder_level_3,str(entry[0]))
+                for entry in level_3:          
+                    folder_level_3 = folder_level_2+'/'+str(entry[2]).replace(":","_colon").replace("?","_qm_").replace('/','_backslash_')
+                    Path(folder_level_3).mkdir(parents=True, exist_ok=True)
+                    print(folder_level_3)
+                    wrapper_to_folder(cursor,folder_level_3,str(entry[0]))
+
+
+
+if __name__ == "__main__":
+    main()
