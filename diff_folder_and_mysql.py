@@ -74,7 +74,7 @@ def main():
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
 
-    folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 3\The house'
+    folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
     folder_path = Path(folder)
     exercise = folder_path/'exercise.xlsx'
    
@@ -127,7 +127,13 @@ def main():
                                 diff = compare(entry=entry,data=output[0] )
                                 if False in diff:
                                     print(entry,output[0],"diff!!", data[1][diff.index(False)] )
-                                    diff_file.write(sheet.title+ ' '+ entry[diff.index(False)] +' '+ output[0][diff.index(False)]+' ' + data[1][diff.index(False)]+'\n')
+                                    print(sheet.title)
+                                    if not output[0][diff.index(False)]:
+                                        print(output[0][diff.index(False)],"is empty")
+                                    else:
+                                        pass
+                                    diff_file.write(sheet.title+ ' '+ str(entry[diff.index(False)]) +' '+ str(output[0][diff.index(False)])+' ' + str(data[1][diff.index(False)])+'\n')
+
                             else:
                                 print('wtf', entry, output)
                                 exit()
