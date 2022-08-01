@@ -25,10 +25,8 @@ def get_full_request(cursor, database, data, entry):
     for ind, ex in enumerate(data[1]):
         if count < len(entry)-1:
             sqlcom = sqlcom + str(ex) + ' = ' + str(entry[ind]) + ' AND '
-            print(ind,ex,entry[ind])
         else:
             sqlcom = sqlcom + str(ex) + ' = ' + str(entry[ind]) 
-            print(ind,ex,entry[ind])
         count = count + 1 
     cursor.execute(sqlcom)
     output = [list(i) for i in cursor.fetchall()] 
@@ -88,11 +86,7 @@ def main():
             sheet = wb[i]
             names,columns,ranges = get_sheet_structure(sheet = sheet)
            
-            #for db in databases:
-            #    print(i,": ",db[-1],"here")
-            print(sheet.max_row)
             for row in range(2,sheet.max_row):
-                
                 for data in zip(names,columns,ranges):
                     (col_low, row_low, col_high, row_high) = data[-1]
                     entry = []
@@ -101,36 +95,35 @@ def main():
                             entry.append(cell.value)
                     
                     if all(x is None for x in entry):
-                        print(data[0], data[1],entry, len(entry), "NOENTRY")
+                        pass
                     else:
                         if data[0] == 'WrapperExercises':
                             #it should be defined by both columns
                             output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
                             if len(output) == 1:
-                                print('all fine with '+str(data[0]))
                                 diff = compare(entry=entry,data=output[0] )
                                 if False in diff:
                                     print(entry,output[0],"diff!!", data[1][diff.index(False)] )
                                     diff_file.write(sheet.title+ ' '+ entry[diff.index(False)] +' '+ output[0][diff.index(False)]+' ' + data[1][diff.index(False)]+'\n')
-                                    
+                            else:
+                                print("ERROR, not unique entry, exiting ", data[0] )  
+                                exit()
                         elif data[0] == 'TranscriptionConfusionBoxes':
                             output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
                             if len(output) == 1:
-                                print('all fine with '+str(data[0]))
                                 diff = compare(entry=entry,data=output[0] )
                                 if False in diff:
                                     print(entry,output[0],"diff!!", data[1][diff.index(False)] )
                                     diff_file.write(sheet.title+ ' '+ entry[diff.index(False)] +' '+ output[0][diff.index(False)]+' ' + data[1][diff.index(False)]+'\n')
-
+                            else:
+                                print("ERROR, not unique entry, exiting ", data[0] )  
+                                exit()
                         else:
                             sqlcom = 'SELECT * FROM ['+database+'].[dbo].[' + data[0]+'] WHERE '
                             sqlcom = sqlcom + str(data[1][0]) + ' = ' + str(entry[0])
-                            print(sqlcom)
                             cursor.execute(sqlcom)
                             output = [list(i) for i in cursor.fetchall()] 
-                            print(output)
                             if len(output) == 1:
-                                print('all fine with '+str(data[0]))
                                 diff = compare(entry=entry,data=output[0] )
                                 if False in diff:
                                     print(entry,output[0],"diff!!", data[1][diff.index(False)] )
