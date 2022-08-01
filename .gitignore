@@ -4,3 +4,4 @@ venv/
 *.xlsx
 .vscode/
 server_private.md
+diff.txt
