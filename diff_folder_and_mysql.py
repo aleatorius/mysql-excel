@@ -1,4 +1,6 @@
 import pyodbc 
+import argparse
+
 from pathlib import Path
 import os
 from openpyxl import Workbook
@@ -82,7 +84,8 @@ def noentry_write(noentry_file,entry,data,sheet,row):
 
 
 
-def main():
+def main(folder):
+
     diff_file = open('diff.txt','w')
     noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
@@ -97,7 +100,7 @@ def main():
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
 
-    folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
+    
     folder_path = Path(folder)
     exercise = folder_path/'exercise.xlsx'
    
@@ -133,7 +136,6 @@ def main():
                                 pass
                         elif data[0] == 'TranscriptionConfusionBoxes':
                             output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
-                            print(output,"TranscriptionConfusionBoxes")
                             if len(output) ==0:
                                 noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
 
@@ -167,4 +169,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(prog='python diff_folder_and_mysql.py -f foldername')
+    parser.add_argument('-f',dest='folder')
+    args = parser.parse_args()
+    if args.folder:
+        main(folder = args.folder)
+    else:
+        folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
+        main(folder=folder)
