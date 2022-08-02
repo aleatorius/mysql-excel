@@ -21,7 +21,6 @@ def compare(entry, data):
     else:
         print("ERROR in compare entries", entry, data)
             
-
 def get_full_request(cursor, database, data, entry):
     sqlcom = 'SELECT * FROM ['+database+'].[dbo].[' + data[0]+'] WHERE '
     count = 0
@@ -80,24 +79,18 @@ def noentry_write(noentry_file,entry,data,sheet,row):
     noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
 
 def main(folder):
-
     diff_file = open('diff.txt','w')
     noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
-    info = []
     for i in ser_file:
         info.append(i.split()[-1].replace("'",''))
     [server,database,username,password] = info
     
-
     #connect to the calst database
-
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
-
     
     folder_path = Path(folder)
-    
     if folder_path.exists():
         pass
     else:
@@ -128,7 +121,6 @@ def main(folder):
                             #it should be defined by both columns
                             output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
                             if len(output) == 0:
-                                
                                 noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
                             elif len(output)>1:
                                 print("ERROR, not unique entry, exiting ", data[0] )  
@@ -158,16 +150,12 @@ def main(folder):
                                 noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
                             else:
                                 print('wtf', entry, output)
-                                exit()
-
-           
+                                exit() 
     else:
         print('No excel file in this folder')
     diff_file.close
     ser_file.close
     noentry_file.close      
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='python diff_folder_and_mysql.py -f foldername')
