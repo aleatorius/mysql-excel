@@ -82,6 +82,7 @@ def main(folder):
     diff_file = open('diff.txt','w')
     noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
+    info = []
     for i in ser_file:
         info.append(i.split()[-1].replace("'",''))
     [server,database,username,password] = info
