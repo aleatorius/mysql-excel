@@ -65,24 +65,19 @@ def get_sheet_structure(sheet):
 
 def diff_write(diff,diff_file,output,entry,data,sheet,row):
     indices = [i for i, x in enumerate(diff) if x == False]
+    (min_col, min_row, max_col, max_row) = data[-1]
+    temp = get_column_interval(min_col, max_col)
     for index in indices:
         if not output[index]:
             print(output[index],"is empty")
         else:
             pass
-        
-        (min_col, min_row, max_col, max_row) = data[-1]
-        temp = get_column_interval(min_col, max_col)
         diff_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp[index])+str(min_row+row)+' ' + str(data[1][index]) +'"\n Excel: "'+ str(entry[index]) +'" db: "'+ str(output[index])+'"\n')
 
 def noentry_write(noentry_file,entry,data,sheet,row):
     (min_col, min_row, max_col, max_row) = data[-1]
     temp = get_column_interval(min_col, max_col)
     noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
-
-
-
-
 
 def main(folder):
 
@@ -106,7 +101,7 @@ def main(folder):
     if folder_path.exists():
         pass
     else:
-        print(' There is no such folder as "'+folder+'"',"\n Please enter the correct folder name")
+        print(' There is no such folder as "'+folder+'"','\n Please enter the correct folder name')
         exit()
     exercise = folder_path/'exercise.xlsx'
    
