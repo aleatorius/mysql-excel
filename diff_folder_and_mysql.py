@@ -5,6 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl import load_workbook
+from openpyxl.utils.cell import cols_from_range, coordinate_to_tuple,get_column_interval
 
 def compare(entry, data):
     if len(entry) == len(data):
@@ -59,9 +60,31 @@ def get_sheet_structure(sheet):
 
     database_ranges_columns = zip(database,database_cols, ranges)
     return database, database_cols,ranges
+
+def diff_write(diff,diff_file,output,entry,data,sheet,row):
+    indices = [i for i, x in enumerate(diff) if x == False]
+    for index in indices:
+        if not output[index]:
+            print(output[index],"is empty")
+        else:
+            pass
         
+        (min_col, min_row, max_col, max_row) = data[-1]
+        temp = get_column_interval(min_col, max_col)
+        diff_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp[index])+str(min_row+row)+' ' + str(data[1][index]) +'"\n Excel: "'+ str(entry[index]) +'" db: "'+ str(output[index])+'"\n')
+
+def noentry_write(noentry_file,entry,data,sheet,row):
+    (min_col, min_row, max_col, max_row) = data[-1]
+    temp = get_column_interval(min_col, max_col)
+    noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
+
+
+
+
+
 def main():
     diff_file = open('diff.txt','w')
+    noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
     info = []
     for i in ser_file:
@@ -100,24 +123,25 @@ def main():
                         if data[0] == 'WrapperExercises':
                             #it should be defined by both columns
                             output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
-                            if len(output) == 1:
-                                diff = compare(entry=entry,data=output[0] )
-                                if False in diff:
-                                    print(entry,output[0],"diff!!", data[1][diff.index(False)] )
-                                    diff_file.write(sheet.title+ ' '+ entry[diff.index(False)] +' '+ output[0][diff.index(False)]+' ' + data[1][diff.index(False)]+'\n')
-                            else:
+                            if len(output) == 0:
+                                
+                                noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
+                            elif len(output)>1:
                                 print("ERROR, not unique entry, exiting ", data[0] )  
                                 exit()
+                            else:
+                                pass
                         elif data[0] == 'TranscriptionConfusionBoxes':
                             output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
-                            if len(output) == 1:
-                                diff = compare(entry=entry,data=output[0] )
-                                if False in diff:
-                                    print(entry,output[0],"diff!!", data[1][diff.index(False)] )
-                                    diff_file.write(sheet.title+ ' '+ entry[diff.index(False)] +' '+ output[0][diff.index(False)]+' ' + data[1][diff.index(False)]+'\n')
-                            else:
+                            print(output,"TranscriptionConfusionBoxes")
+                            if len(output) ==0:
+                                noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
+
+                            elif len(output)>1:
                                 print("ERROR, not unique entry, exiting ", data[0] )  
                                 exit()
+                            else:
+                                pass
                         else:
                             sqlcom = 'SELECT * FROM ['+database+'].[dbo].[' + data[0]+'] WHERE '
                             sqlcom = sqlcom + str(data[1][0]) + ' = ' + str(entry[0])
@@ -126,32 +150,19 @@ def main():
                             if len(output) == 1:
                                 diff = compare(entry=entry,data=output[0] )
                                 if False in diff:
-                                    print(entry,output[0],"diff!!", data[1][diff.index(False)] )
-                                    print(sheet.title)
-                                    if not output[0][diff.index(False)]:
-                                        print(output[0][diff.index(False)],"is empty")
-                                    else:
-                                        pass
-                                    diff_file.write(sheet.title+ ' '+ str(entry[diff.index(False)]) +' '+ str(output[0][diff.index(False)])+' ' + str(data[1][diff.index(False)])+'\n')
-
+                                   diff_write(diff=diff,diff_file=diff_file,output=output[0],entry=entry,data=data,sheet=sheet, row=row)
                             else:
                                 print('wtf', entry, output)
                                 exit()
 
-
-
-                        
-
-            
-                
-                
+           
     else:
         print('No excel file in this folder')
-            
-                
-            
+    diff_file.close
+    ser_file.close
+    noentry_file.close      
 
 
-           
+
 if __name__ == "__main__":
     main()
