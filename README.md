@@ -4,13 +4,16 @@
 - [diff_folder_and_mysql.py](diff_folder_and_mysql.py)  -- this script compares a modified excel file with the calst database:
   - usage sample: ``python.exe .\vocabulary_case\diff_folder_and_mysql.py -f 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\Numbers 1'``
   - can be used without the option ``-f``, in this case should be in 
-    -   ```if __name__ == "__main__":
-        parser = argparse.ArgumentParser(prog='python diff_folder_and_mysql.py -f foldername')
-        parser.add_argument('-f',dest='folder')
-        args = parser.parse_args()
-        if args.folder:
-            main(folder = args.folder)
-        else:
-            folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
-            main(folder=folder) ```
+    -    
+    -   ```
+         if __name__ == "__main__":
+            parser = argparse.ArgumentParser(prog='python diff_folder_and_mysql.py -f foldername')
+            parser.add_argument('-f',dest='folder')
+            args = parser.parse_args()
+            if args.folder:
+                main(folder = args.folder)
+            else:
+                folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
+                main(folder=folder) 
+            ```
 
