@@ -151,6 +151,8 @@ def main():
                                 diff = compare(entry=entry,data=output[0] )
                                 if False in diff:
                                    diff_write(diff=diff,diff_file=diff_file,output=output[0],entry=entry,data=data,sheet=sheet, row=row)
+                            elif len(output) == 0:
+                                noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
                             else:
                                 print('wtf', entry, output)
                                 exit()
