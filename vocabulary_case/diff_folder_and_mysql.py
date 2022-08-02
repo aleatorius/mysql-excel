@@ -102,6 +102,12 @@ def main(folder):
 
     
     folder_path = Path(folder)
+    
+    if folder_path.exists():
+        pass
+    else:
+        print(' There is no such folder as "'+folder+'"',"\n Please enter the correct folder name")
+        exit()
     exercise = folder_path/'exercise.xlsx'
    
     if exercise.exists():
