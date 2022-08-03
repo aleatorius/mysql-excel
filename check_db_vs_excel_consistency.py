@@ -120,7 +120,7 @@ def compare_between_values_in_columns(sheet,input_columns,warnings_file):
             return columns_to_compare,False
 
 
-def check_one_value_columns(sheet,input_columns,values, warnings_file):
+def check_one_value_columns_vs_values(sheet,input_columns,values, warnings_file):
     db_cols_row = 2
     if len(input_columns) != len(values):
         print("ERROR in check_one_value_column")
@@ -137,6 +137,25 @@ def check_one_value_columns(sheet,input_columns,values, warnings_file):
             warnings_file.write("ERROR, error in the column! Check this column and correct it:\n")
             warnings_file.write('Row: '+ cell.column_letter+'\n\n')
             return False
+
+
+def check_one_value_columns(sheet,input_columns,warnings_file):
+    db_cols_row = 2
+    columns_to_compare = [] 
+    columns_letter =  []
+    for colval in input_columns:              
+        for row in range(db_cols_row+1,sheet.max_row+1):
+            cell = sheet.cell(row=row,column=colval)
+            columns_to_compare.append(cell.value)
+        columns_letter.append(cell.column_letter)
+    print(columns_to_compare)
+    if all_equal(columns_to_compare) == True:
+        return True
+    else:
+        warnings_file.write("ERROR, error in the columns! Check these columns and correct them:\n")
+        warnings_file.write('Rows: '+ str(columns_letter)+'\n\n')
+        return False
+
 
 
 
@@ -208,8 +227,14 @@ def main(folder):
             id_set_to_compare = [('ExerciseId','ConfusionBoxes')]
         
             exerciseid = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)
-            check_one_value_columns(sheet=sheet_cb,input_columns=exerciseid,values=[ExerciseId], warnings_file=warnings_file)
+            check_one_value_columns_vs_values(sheet=sheet_cb,input_columns=exerciseid,values=[ExerciseId], warnings_file=warnings_file)
             print(exerciseid,"cb")
+
+            id_set_to_compare = [('Id','ConfusionBoxes'),('ConfusionBox_Id','TranscriptionConfusionBoxes')]
+        
+            confusionboxid = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)
+            check_one_value_columns(sheet=sheet_cb,input_columns=confusionboxid, warnings_file=warnings_file)
+            print(confusionboxid,"cb")
             
         #compared = compare_values_in_columns(sheet=sheet,input_column=exerciseid,warnings_file=warnings_file)
             
