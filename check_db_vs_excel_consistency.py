@@ -85,6 +85,7 @@ def noentry_write(noentry_file,entry,data,sheet,row):
     noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
 
 def main(folder):
+    
     warnings_file = open('warnings.txt','w')
     noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
@@ -117,7 +118,10 @@ def main(folder):
             warnings_file.write('For the sheet: '+sheet.title+' there are less than 14 columns: '+ str(sheet.max_column)+'\n')
             
         names,columns,ranges = get_sheet_structure(sheet = sheet)
-        print(names,columns,ranges)
+        db_row = 1
+        db_cols_row = 2
+        
+        
         #check wrapper for this exercise
         
         #for row in range(1,sheet.max_row):
@@ -129,26 +133,26 @@ def main(folder):
         
             for cols in sheet.iter_cols(min_col=col_low,min_row=row_low+row, max_col=col_high, max_row= row_low+row):
                 for cell in cols:
-                    print(cell.value)
+                    database_cell = sheet.cell(column=cell.column, row=db_row)
                     if cell.value == 'Wrapper_Id':
-                        print(cell.column)
                         wrapperid.append(cell.column)
                     if cell.value == 'Exercise_Id':
-                        print(cell.column)
                         exerciseid.append(cell.column)
+                        
                     if cell.value == 'ExerciseId':
-                        print(cell.column)
                         exerciseid.append(cell.column)
-        print(wrapperid,exerciseid)
+                       
+                    if cell.value == 'Id' and database_cell.value == 'Exercises':
+                        exerciseid.append(cell.column)
+                        
+        
         for row in range(3,sheet.max_row+1):
             to_compare = []
             compared_cells_cols = []
             for col in exerciseid:
                 cell = sheet.cell(row=row,column=col)
-                print(cell.value, row)
                 to_compare.append(cell.value)
                 compared_cells_cols.append(cell.column_letter)
-            print(to_compare, all_equal(to_compare), compared_cells_cols)
             if all_equal(to_compare) == True:
                 pass
             else:
@@ -157,6 +161,7 @@ def main(folder):
                 for cell_col in compared_cells_cols:
                     string = string + cell_col + str(row)+' '
                 warnings_file.write(string + '\n')
+                warnings_file.write('Values: '+str(to_compare)+'\n\n')
 
                     
 
