@@ -120,6 +120,24 @@ def compare_between_values_in_columns(sheet,input_columns,warnings_file):
             return columns_to_compare,False
 
 
+def check_one_value_columns(sheet,input_columns,values, warnings_file):
+    db_cols_row = 2
+    if len(input_columns) != len(values):
+        print("ERROR in check_one_value_column")
+        exit()
+    for colval in zip(input_columns,values):  
+        columns_to_compare = [colval[-1]]            
+        for row in range(db_cols_row+1,sheet.max_row+1):
+            cell = sheet.cell(row=row,column=colval[0])
+            columns_to_compare.append(cell.value)
+        print(columns_to_compare)
+        if all_equal(columns_to_compare) == True:
+            return True
+        else:
+            warnings_file.write("ERROR, error in the column! Check this column and correct it:\n")
+            warnings_file.write('Row: '+ cell.column_letter+'\n\n')
+            return False
+
 
 
 def main(folder):
@@ -170,6 +188,7 @@ def main(folder):
             ExerciseId = compared[0]
         else:
             print(compared)
+            exit()
         
 
 
@@ -189,6 +208,7 @@ def main(folder):
             id_set_to_compare = [('ExerciseId','ConfusionBoxes')]
         
             exerciseid = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)
+            check_one_value_columns(sheet=sheet_cb,input_columns=exerciseid,values=[ExerciseId], warnings_file=warnings_file)
             print(exerciseid,"cb")
             
         #compared = compare_values_in_columns(sheet=sheet,input_column=exerciseid,warnings_file=warnings_file)
@@ -253,7 +273,7 @@ def main(folder):
                         exit() 
     else:
         print('No excel file in this folder')
-    diff_file.close
+    warnings_file.close
     ser_file.close
     noentry_file.close      
 
