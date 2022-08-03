@@ -84,6 +84,44 @@ def noentry_write(noentry_file,entry,data,sheet,row):
     temp = get_column_interval(min_col, max_col)
     noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
 
+def get_columns_to_compare(sheet, id_set_to_compare):
+    db_row = 1
+    db_names,db_columns,db_ranges = get_sheet_structure(sheet = sheet)
+    output = []
+    for data in zip(db_names,db_columns,db_ranges):
+        (col_low, row_low, col_high, row_high) = data[-1]
+        for cols in sheet.iter_cols(min_col=col_low,min_row=row_low+db_row, max_col=col_high, max_row= row_low+db_row):
+            for cell in cols:
+                for col in id_set_to_compare:
+                    if cell.value == col[0] and data[0] == col[1]:
+                        output.append(cell.column)
+    return output
+
+
+def compare_between_values_in_columns(sheet,input_columns,warnings_file):
+    db_cols_row = 2
+
+    for row in range(db_cols_row+1,sheet.max_row+1):
+        columns_to_compare = []
+        compared_cells_cols = []
+        for col in input_columns:
+            cell = sheet.cell(row=row,column=col)
+            columns_to_compare.append(cell.value)
+            compared_cells_cols.append(cell.column_letter)
+        if all_equal(columns_to_compare) == True:
+            return columns_to_compare[0],True
+        else:
+            warnings_file.write("ERROR, exercise ids do not match! Check these cells and correct them:\n")
+            string = ''
+            for cell_col in compared_cells_cols:
+                string = string + cell_col + str(row)+' '
+            warnings_file.write(string + '\n')
+            warnings_file.write('Values: '+str(columns_to_compare)+'\n\n')
+            return columns_to_compare,False
+
+
+
+
 def main(folder):
     
     warnings_file = open('warnings.txt','w')
@@ -117,53 +155,56 @@ def main(folder):
         if sheet.max_column < 14:
             warnings_file.write('For the sheet: '+sheet.title+' there are less than 14 columns: '+ str(sheet.max_column)+'\n')
             
-        names,columns,ranges = get_sheet_structure(sheet = sheet)
-        db_row = 1
-        db_cols_row = 2
+       
         
         
         #check wrapper for this exercise
         
         #for row in range(1,sheet.max_row):
-        row = 1
-        exerciseid = []
-        wrapperid = []
-        for data in zip(names,columns,ranges):
-            (col_low, row_low, col_high, row_high) = data[-1]
+        id_set_to_compare = [('Exercise_Id','WrapperExercises'),('Id','Exercises'),('ExerciseId','Properties')]
         
-            for cols in sheet.iter_cols(min_col=col_low,min_row=row_low+row, max_col=col_high, max_row= row_low+row):
-                for cell in cols:
-                    database_cell = sheet.cell(column=cell.column, row=db_row)
-                    if cell.value == 'Wrapper_Id':
-                        wrapperid.append(cell.column)
-                    if cell.value == 'Exercise_Id':
-                        exerciseid.append(cell.column)
-                        
-                    if cell.value == 'ExerciseId':
-                        exerciseid.append(cell.column)
-                       
-                    if cell.value == 'Id' and database_cell.value == 'Exercises':
-                        exerciseid.append(cell.column)
-                        
+        exerciseid = get_columns_to_compare(sheet=sheet, id_set_to_compare=id_set_to_compare)
+        compared = compare_between_values_in_columns(sheet=sheet,input_columns=exerciseid,warnings_file=warnings_file)
+        if compared[-1] == True:
+            print(compared[0])
+            ExerciseId = compared[0]
+        else:
+            print(compared)
         
-        for row in range(3,sheet.max_row+1):
-            to_compare = []
-            compared_cells_cols = []
-            for col in exerciseid:
-                cell = sheet.cell(row=row,column=col)
-                to_compare.append(cell.value)
-                compared_cells_cols.append(cell.column_letter)
-            if all_equal(to_compare) == True:
-                pass
-            else:
-                warnings_file.write("ERROR, exercise ids do not match! Check these cells:\n")
-                string = ''
-                for cell_col in compared_cells_cols:
-                    string = string + cell_col + str(row)+' '
-                warnings_file.write(string + '\n')
-                warnings_file.write('Values: '+str(to_compare)+'\n\n')
 
-                    
+
+
+        
+        #check exercises in the different sheet
+        
+        confusionbox_sheet =  []
+        matches = ['ConfusionBox']
+        for name in wb.sheetnames:
+            if any(x in name for x in matches):
+                confusionbox_sheet.append(name)
+        print(confusionbox_sheet)
+        for cb in confusionbox_sheet:
+            sheet_cb = wb[cb]
+            print(sheet_cb.max_row)
+            id_set_to_compare = [('ExerciseId','ConfusionBoxes')]
+        
+            exerciseid = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)
+            print(exerciseid,"cb")
+            
+        #compared = compare_values_in_columns(sheet=sheet,input_column=exerciseid,warnings_file=warnings_file)
+            
+
+            
+        exit()
+        sheet = wb['Exercise']
+        if sheet.max_row != 3:
+            warnings_file.write('For the sheet: '+sheet.title+' there are more rows than 3: '+ str(sheet.max_row)+'\n')
+        if sheet.max_column < 14:
+            warnings_file.write('For the sheet: '+sheet.title+' there are less than 14 columns: '+ str(sheet.max_column)+'\n')
+            
+        names,columns,ranges = get_sheet_structure(sheet = sheet)
+        db_row = 1
+        db_cols_row = 2 
 
         exit()
         for data in zip(names,columns,ranges):
@@ -223,6 +264,6 @@ if __name__ == "__main__":
     if args.folder:
         main(folder = args.folder)
     else:
-        folder='C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
-        #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\\Numbers 1'
+        #folder='C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
+        folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\\Numbers 1'
         main(folder=folder)
