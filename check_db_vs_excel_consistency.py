@@ -115,14 +115,17 @@ def compare_between_values_in_columns(sheet,input_columns,warnings_file):
         compared_cells_cols = []
         for col in input_columns:
             cell = sheet.cell(row=row,column=col)
-            columns_to_compare.append(cell.value)
-            compared_cells_cols.append(cell.column_letter)
+            if cell.value:
+                columns_to_compare.append(cell.value)
+                compared_cells_cols.append(cell.column_letter)
+            else:
+                pass
         if all_equal(columns_to_compare) == True:
             output.append(True)
         else:
             output.append(False)
             warnings_file.write("ERROR, exercise ids do not match! Check these cells and correct them:\n")
-            string = ''
+            string = 'Sheet: '+sheet.title+' '
             for cell_col in compared_cells_cols:
                 string = string + cell_col + str(row)+' '
             warnings_file.write(string + '\n')
@@ -279,7 +282,22 @@ def main(folder):
             wordid = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)
             compared = compare_between_values_in_columns(sheet=sheet_cb,input_columns=wordid,warnings_file=warnings_file)
         
-            
+        wordproperties_sheet =  []
+        matches = ['Words Properties']
+        for name in wb.sheetnames:
+            if any(x in name for x in matches):
+                wordproperties_sheet.append(name)
+        print(wordproperties_sheet)
+        for wp in wordproperties_sheet :
+            sheet_wp = wb[wp]
+            print(sheet_cb.max_row)
+           
+            id_set_to_compare = [('Id','Words'), ('WordId','Properties')]
+        
+            wordid_wp = get_columns_to_compare(sheet=sheet_wp, id_set_to_compare=id_set_to_compare)
+            print(wordid_wp)
+            compared = compare_between_values_in_columns(sheet=sheet_wp,input_columns=wordid_wp,warnings_file=warnings_file)
+  
 
             
         #compared = compare_values_in_columns(sheet=sheet,input_column=exerciseid,warnings_file=warnings_file)
