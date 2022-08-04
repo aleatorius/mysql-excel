@@ -287,79 +287,26 @@ def main(folder):
         for name in wb.sheetnames:
             if any(x in name for x in matches):
                 wordproperties_sheet.append(name)
-        print(wordproperties_sheet)
         for wp in wordproperties_sheet :
-            sheet_wp = wb[wp]
-            print(sheet_cb.max_row)
-           
+            sheet_wp = wb[wp]   
             id_set_to_compare = [('Id','Words'), ('WordId','Properties')]
-        
             wordid_wp = get_columns_to_compare(sheet=sheet_wp, id_set_to_compare=id_set_to_compare)
             print(wordid_wp)
             compared = compare_between_values_in_columns(sheet=sheet_wp,input_columns=wordid_wp,warnings_file=warnings_file)
   
+        speaker_sheet =  []
+        matches = ['Speaker']
 
+        for name in wb.sheetnames:
+            if any(x in name for x in matches):
+                speaker_sheet.append(name)
+        print(speaker_sheet)
+        for sp in speaker_sheet :
+            sheet_sp = wb[sp]
+            id_set_to_compare = [('Transcription_Id','Pronunciations'), ('Id','Transcriptions')]
+            trans_sp = get_columns_to_compare(sheet=sheet_sp, id_set_to_compare=id_set_to_compare)
+            compared = compare_between_values_in_columns(sheet=sheet_sp,input_columns=trans_sp,warnings_file=warnings_file)
             
-        #compared = compare_values_in_columns(sheet=sheet,input_column=exerciseid,warnings_file=warnings_file)
-            
-
-            
-        exit()
-        sheet = wb['Exercise']
-        if sheet.max_row != 3:
-            warnings_file.write('For the sheet: '+sheet.title+' there are more rows than 3: '+ str(sheet.max_row)+'\n')
-        if sheet.max_column < 14:
-            warnings_file.write('For the sheet: '+sheet.title+' there are less than 14 columns: '+ str(sheet.max_column)+'\n')
-            
-        names,columns,ranges = get_sheet_structure(sheet = sheet)
-        db_row = 1
-        db_cols_row = 2 
-
-        exit()
-        for data in zip(names,columns,ranges):
-            (col_low, row_low, col_high, row_high) = data[-1]
-            entry = []
-            for cells in sheet.iter_cols(min_col=col_low,min_row=row_low+row, max_col=col_high, max_row= row_low+row):
-                for cell in cells:
-                    entry.append(cell.value)
-            
-            if all(x is None for x in entry):
-                pass
-            else:
-                if data[0] == 'WrapperExercises':
-                    #it should be defined by both columns
-                    output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
-                    if len(output) == 0:
-                        noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
-                    elif len(output)>1:
-                        print("ERROR, not unique entry, exiting ", data[0] )  
-                        exit()
-                    else:
-                        pass
-                elif data[0] == 'TranscriptionConfusionBoxes':
-                    output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
-                    if len(output) ==0:
-                        noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
-
-                    elif len(output)>1:
-                        print("ERROR, not unique entry, exiting ", data[0] )  
-                        exit()
-                    else:
-                        pass
-                else:
-                    sqlcom = 'SELECT * FROM ['+database+'].[dbo].[' + data[0]+'] WHERE '
-                    sqlcom = sqlcom + str(data[1][0]) + ' = ' + str(entry[0])
-                    cursor.execute(sqlcom)
-                    output = [list(i) for i in cursor.fetchall()] 
-                    if len(output) == 1:
-                        diff = compare(entry=entry,data=output[0] )
-                        if False in diff:
-                            diff_write(diff=diff,diff_file=diff_file,output=output[0],entry=entry,data=data,sheet=sheet, row=row)
-                    elif len(output) == 0:
-                        noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
-                    else:
-                        print('wtf', entry, output)
-                        exit() 
     else:
         print('No excel file in this folder')
     warnings_file.close
