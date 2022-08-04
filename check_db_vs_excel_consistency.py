@@ -85,6 +85,14 @@ def noentry_write(noentry_file,entry,data,sheet,row):
     noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
 
 def get_columns_to_compare(sheet, id_set_to_compare):
+    print(id_set_to_compare)
+    if type(id_set_to_compare) is tuple:
+        id_set_to_compare = [id_set_to_compare]
+    elif type(id_set_to_compare) is list:
+        pass
+    else:
+        print('neither a tuple or a list')
+        exit()
     db_row = 1
     db_names,db_columns,db_ranges = get_sheet_structure(sheet = sheet)
     output = []
@@ -99,8 +107,9 @@ def get_columns_to_compare(sheet, id_set_to_compare):
 
 
 def compare_between_values_in_columns(sheet,input_columns,warnings_file):
+    
     db_cols_row = 2
-
+    output = []
     for row in range(db_cols_row+1,sheet.max_row+1):
         columns_to_compare = []
         compared_cells_cols = []
@@ -109,15 +118,38 @@ def compare_between_values_in_columns(sheet,input_columns,warnings_file):
             columns_to_compare.append(cell.value)
             compared_cells_cols.append(cell.column_letter)
         if all_equal(columns_to_compare) == True:
-            return columns_to_compare[0],True
+            output.append(True)
         else:
+            output.append(False)
             warnings_file.write("ERROR, exercise ids do not match! Check these cells and correct them:\n")
             string = ''
             for cell_col in compared_cells_cols:
                 string = string + cell_col + str(row)+' '
             warnings_file.write(string + '\n')
             warnings_file.write('Values: '+str(columns_to_compare)+'\n\n')
-            return columns_to_compare,False
+    return output
+
+
+def check_exerciseid(sheet,input_columns,warnings_file):
+    db_cols_row = 2
+    row=db_cols_row+1
+    columns_to_compare = []
+    compared_cells_cols = []
+    for col in input_columns:
+        cell = sheet.cell(row=row,column=col)
+        columns_to_compare.append(cell.value)
+        compared_cells_cols.append(cell.column_letter)
+    if all_equal(columns_to_compare) == True:
+        return columns_to_compare[0],True
+    else:
+        warnings_file.write("ERROR, exercise ids do not match! Check these cells and correct them:\n")
+        string = ''
+        for cell_col in compared_cells_cols:
+            string = string + cell_col + str(row)+' '
+        warnings_file.write(string + '\n')
+        warnings_file.write('Values: '+str(columns_to_compare)+'\n\n')
+        return columns_to_compare,False
+
 
 
 def check_one_value_columns_vs_values(sheet,input_columns,values, warnings_file):
@@ -191,27 +223,19 @@ def main(folder):
             warnings_file.write('For the sheet: '+sheet.title+' there are more rows than 3: '+ str(sheet.max_row)+'\n')
         if sheet.max_column < 14:
             warnings_file.write('For the sheet: '+sheet.title+' there are less than 14 columns: '+ str(sheet.max_column)+'\n')
-            
        
-        
-        
         #check wrapper for this exercise
         
-        #for row in range(1,sheet.max_row):
         id_set_to_compare = [('Exercise_Id','WrapperExercises'),('Id','Exercises'),('ExerciseId','Properties')]
         
         exerciseid = get_columns_to_compare(sheet=sheet, id_set_to_compare=id_set_to_compare)
-        compared = compare_between_values_in_columns(sheet=sheet,input_columns=exerciseid,warnings_file=warnings_file)
+        compared = check_exerciseid(sheet=sheet,input_columns=exerciseid,warnings_file=warnings_file)
         if compared[-1] == True:
             print(compared[0])
             ExerciseId = compared[0]
         else:
             print(compared)
             exit()
-        
-
-
-
         
         #check exercises in the different sheet
         
@@ -235,6 +259,28 @@ def main(folder):
             confusionboxid = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)
             check_one_value_columns(sheet=sheet_cb,input_columns=confusionboxid, warnings_file=warnings_file)
             print(confusionboxid,"cb")
+
+            id_set_to_compare = [('Transcription_Id','TranscriptionConfusionBoxes'),('Id','Transcriptions')]
+            print(id_set_to_compare[-1])
+            transcriptions = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare[-1])
+            print(transcriptions)
+            #attention -- bad place -- if more then one transcription we need to choose the first one
+            if len(transcriptions) == 2:
+                wholeset  = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)[0:2]
+                print(wholeset)
+                compared = compare_between_values_in_columns(sheet=sheet_cb,input_columns=wholeset,warnings_file=warnings_file)
+            elif len(transcriptions) == 1:
+                wholeset  = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)
+                compared = compare_between_values_in_columns(sheet=sheet_cb,input_columns=wholeset,warnings_file=warnings_file)
+            else:
+                print("error confusionbox block")
+                exit()
+            id_set_to_compare = [('Id','Words'),('WordId','Transcriptions')]
+            wordid = get_columns_to_compare(sheet=sheet_cb, id_set_to_compare=id_set_to_compare)
+            compared = compare_between_values_in_columns(sheet=sheet_cb,input_columns=wordid,warnings_file=warnings_file)
+        
+            
+
             
         #compared = compare_values_in_columns(sheet=sheet,input_column=exerciseid,warnings_file=warnings_file)
             
