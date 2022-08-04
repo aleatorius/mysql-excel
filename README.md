@@ -15,5 +15,5 @@
             else:
                 folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
                 main(folder=folder) 
- [check_db_vs_excel_consistency.py](check_db_vs_excel_consistency.py) -- checks some columns to be consistent between each other    
+ - [check_db_vs_excel_consistency.py](check_db_vs_excel_consistency.py) -- checks some columns to be consistent between each other    
 
