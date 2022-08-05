@@ -1,4 +1,6 @@
+from email import contentmanager
 from site import execsitecustomize
+from pkg_resources import empty_provider
 import pyodbc 
 import argparse
 from itertools import groupby
@@ -73,10 +75,10 @@ def diff_write(diff,diff_file,output,entry,data,sheet,row):
     (min_col, min_row, max_col, max_row) = data[-1]
     temp = get_column_interval(min_col, max_col)
     for index in indices:
-        if not output[index]:
-            print(output[index],"is empty")
-        else:
-            pass
+        #if not output[index]:
+        #    print(output[index],"is empty")
+        #else:
+        #    pass
         diff_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp[index])+str(min_row+row)+' ' + str(data[1][index]) +'"\n Excel: "'+ str(entry[index]) +'" db: "'+ str(output[index])+'"\n')
 
 def noentry_write(noentry_file,entry,data,sheet,row):
@@ -85,7 +87,6 @@ def noentry_write(noentry_file,entry,data,sheet,row):
     noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
 
 def get_columns_to_compare(sheet, id_set_to_compare):
-    print(id_set_to_compare)
     if type(id_set_to_compare) is tuple:
         id_set_to_compare = [id_set_to_compare]
     elif type(id_set_to_compare) is list:
@@ -182,7 +183,6 @@ def check_one_value_columns(sheet,input_columns,warnings_file):
             cell = sheet.cell(row=row,column=colval)
             columns_to_compare.append(cell.value)
         columns_letter.append(cell.column_letter)
-    print(columns_to_compare)
     if all_equal(columns_to_compare) == True:
         return True
     else:
@@ -287,7 +287,6 @@ def main(folder):
             sheet_wp = wb[wp]   
             id_set_to_compare = [('Id','Words'), ('WordId','Properties')]
             wordid_wp = get_columns_to_compare(sheet=sheet_wp, id_set_to_compare=id_set_to_compare)
-            print(wordid_wp)
             compared = compare_between_values_in_columns(sheet=sheet_wp,input_columns=wordid_wp,warnings_file=warnings_file)
   
         speaker_sheet =  []
@@ -296,7 +295,6 @@ def main(folder):
         for name in wb.sheetnames:
             if any(x in name for x in matches):
                 speaker_sheet.append(name)
-        print(speaker_sheet)
         for sp in speaker_sheet :
             sheet_sp = wb[sp]
             id_set_to_compare = [('Transcription_Id','Pronunciations'), ('Id','Transcriptions')]
@@ -305,9 +303,11 @@ def main(folder):
             
     else:
         print('No excel file in this folder')
-    warnings_file.close
+    
     ser_file.close
-    noentry_file.close      
+    noentry_file.close
+    warnings_file.close    
+ 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='python check_db_vs_excel_consistency.py -f foldername')
@@ -318,4 +318,5 @@ if __name__ == "__main__":
     else:
         #folder='C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
         folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\\Numbers 1'
+        #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 2\\Nationalities'
         main(folder=folder)
