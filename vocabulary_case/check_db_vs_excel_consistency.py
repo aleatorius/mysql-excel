@@ -8,32 +8,7 @@ from openpyxl.utils.cell import get_column_interval
 def all_equal(iterable):
     g = groupby(iterable)
     return next(g, True) and not next(g, False)
-
-def compare(entry, data):
-    if len(entry) == len(data):
-        diff = []
-        for ind,ex in enumerate(entry):
-            if ex == data[ind]:
-                diff.append(True)
-            else:
-                diff.append(False)
-        return diff
-    else:
-        print("ERROR in compare entries", entry, data)
             
-def get_full_request(cursor, database, data, entry):
-    sqlcom = 'SELECT * FROM ['+database+'].[dbo].[' + data[0]+'] WHERE '
-    count = 0
-    for ind, ex in enumerate(data[1]):
-        if count < len(entry)-1:
-            sqlcom = sqlcom + str(ex) + ' = ' + str(entry[ind]) + ' AND '
-        else:
-            sqlcom = sqlcom + str(ex) + ' = ' + str(entry[ind]) 
-        count = count + 1 
-    cursor.execute(sqlcom)
-    output = [list(i) for i in cursor.fetchall()] 
-    return output    
-
 def get_sheet_structure(sheet):
     #a database row specified as merged cells
     merged_ranges = sheet.merged_cells.ranges
@@ -61,22 +36,6 @@ def get_sheet_structure(sheet):
 
     database_ranges_columns = zip(database,database_cols, ranges)
     return database, database_cols,ranges
-
-def diff_write(diff,diff_file,output,entry,data,sheet,row):
-    indices = [i for i, x in enumerate(diff) if x == False]
-    (min_col, min_row, max_col, max_row) = data[-1]
-    temp = get_column_interval(min_col, max_col)
-    for index in indices:
-        if not output[index]:
-            print(output[index],"is empty")
-        else:
-            pass
-        diff_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp[index])+str(min_row+row)+' ' + str(data[1][index]) +'"\n Excel: "'+ str(entry[index]) +'" db: "'+ str(output[index])+'"\n')
-
-def noentry_write(noentry_file,entry,data,sheet,row):
-    (min_col, min_row, max_col, max_row) = data[-1]
-    temp = get_column_interval(min_col, max_col)
-    noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
 
 def get_columns_to_compare(sheet, id_set_to_compare):
     if type(id_set_to_compare) is tuple:
@@ -176,7 +135,6 @@ def check_one_value_columns(sheet,input_columns,warnings_file):
 
 def main(folder):
     warnings_file = open('warnings.txt','w')
-    noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
     info = []
     for i in ser_file:
@@ -283,7 +241,6 @@ def main(folder):
         print('No excel file in this folder')
     
     ser_file.close
-    noentry_file.close
     warnings_file.close    
  
 if __name__ == "__main__":
