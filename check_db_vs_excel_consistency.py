@@ -1,17 +1,9 @@
-from email import contentmanager
-from site import execsitecustomize
-from pkg_resources import empty_provider
 import pyodbc 
 import argparse
 from itertools import groupby
-
 from pathlib import Path
-import os
-from openpyxl import Workbook
-from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
-from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl import load_workbook
-from openpyxl.utils.cell import cols_from_range, coordinate_to_tuple,get_column_interval
+from openpyxl.utils.cell import get_column_interval
 
 def all_equal(iterable):
     g = groupby(iterable)
@@ -75,10 +67,10 @@ def diff_write(diff,diff_file,output,entry,data,sheet,row):
     (min_col, min_row, max_col, max_row) = data[-1]
     temp = get_column_interval(min_col, max_col)
     for index in indices:
-        #if not output[index]:
-        #    print(output[index],"is empty")
-        #else:
-        #    pass
+        if not output[index]:
+            print(output[index],"is empty")
+        else:
+            pass
         diff_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp[index])+str(min_row+row)+' ' + str(data[1][index]) +'"\n Excel: "'+ str(entry[index]) +'" db: "'+ str(output[index])+'"\n')
 
 def noentry_write(noentry_file,entry,data,sheet,row):
@@ -106,9 +98,7 @@ def get_columns_to_compare(sheet, id_set_to_compare):
                         output.append(cell.column)
     return output
 
-
 def compare_between_values_in_columns(sheet,input_columns,warnings_file):
-    
     db_cols_row = 2
     output = []
     for row in range(db_cols_row+1,sheet.max_row+1):
@@ -133,7 +123,6 @@ def compare_between_values_in_columns(sheet,input_columns,warnings_file):
             warnings_file.write('Values: '+str(columns_to_compare)+'\n\n')
     return output
 
-
 def check_exerciseid(sheet,input_columns,warnings_file):
     db_cols_row = 2
     row=db_cols_row+1
@@ -154,8 +143,6 @@ def check_exerciseid(sheet,input_columns,warnings_file):
         warnings_file.write('Values: '+str(columns_to_compare)+'\n\n')
     return columns_to_compare 
 
-
-
 def check_one_value_columns_vs_value(sheet,input_columns,value, warnings_file):
     db_cols_row = 2
     fails = []
@@ -171,9 +158,6 @@ def check_one_value_columns_vs_value(sheet,input_columns,value, warnings_file):
             warnings_file.write(fail+' should be '+str(value)+'\n')
         warnings_file.write('\n')
         
-        
-
-
 def check_one_value_columns(sheet,input_columns,warnings_file):
     db_cols_row = 2
     columns_to_compare = [] 
@@ -186,16 +170,11 @@ def check_one_value_columns(sheet,input_columns,warnings_file):
     if all_equal(columns_to_compare) == True:
         return True
     else:
-
         warnings_file.write("ERROR, error in the columns! Check these columns and correct them:\n")
         warnings_file.write('Sheet: ' +sheet.title+' Rows: '+ str(columns_letter)+'\n\n')
         return False
 
-
-
-
 def main(folder):
-    
     warnings_file = open('warnings.txt','w')
     noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
@@ -239,8 +218,7 @@ def main(folder):
         else:
             print(compared, "error, serious mismatch, quitting")
             exit()
-        
-        
+       
         #check exercises in the different sheet, compare with exercised
         
         confusionbox_sheet =  []
@@ -308,7 +286,6 @@ def main(folder):
     noentry_file.close
     warnings_file.close    
  
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='python check_db_vs_excel_consistency.py -f foldername')
     parser.add_argument('-f',dest='folder')
