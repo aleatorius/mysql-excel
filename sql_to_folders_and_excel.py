@@ -244,13 +244,16 @@ def get_transcription(cursor, wbout, i , word_data, multi, title):
 
 def wrapper(cursor,data,folder):
     wbout = Workbook()
+    header_cells = []
     header_0,header = get_header(cursor=cursor,table='Wrappers')
+    header_cells.append(len(header))
     sheet = wbout.active
     sheet.title = "Wrappers"
     header_0,header =  get_header(cursor=cursor, table='Wrappers')
     sheet.append(header_0)
     sheet.append(header)
     sheet.append(data)
+    get_style(header_cells,sheet)
     wbout.save(folder+'\wrapper.xlsx')
     wbout.close()
 
@@ -453,7 +456,7 @@ def main():
 
     #wrapper corresponds to a second levels structures like lessons 1, 2,3 
 
-    localcase = True
+    localcase = False
 
     if localcase:
         Path('Test').mkdir(parents=True, exist_ok=True)
@@ -463,7 +466,7 @@ def main():
         #wrapper_to_folder(cursor,"Test","156")
         wrapper_to_folder(cursor,"Test","1336")
     else:  
-        course = 'Greek'
+        course = 'Spanish'
         sqlcom = "SELECT * FROM [CalstContent].[dbo].[Wrappers] where [Name] = '"+course+"EntryPoint'"
         cursor.execute(sqlcom)  
         data = [list(i) for i in cursor.fetchall()] 
@@ -485,7 +488,7 @@ def main():
                 folder_level_2 = folder_level_1+'/'+str(j[2])
                 Path(folder_level_2).mkdir(parents=True, exist_ok=True)
                 print(folder_level_2)
-                wrapper_to_folder(cursor,folder_level_2,str(j[0]))
+                #wrapper_to_folder(cursor,folder_level_2,str(j[0]))
                 sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(j[0])
                 cursor.execute(sqlcom)  
                 level_3 = [list(i) for i in cursor.fetchall()] 
@@ -494,7 +497,7 @@ def main():
                     folder_level_3 = folder_level_2+'/'+str(entry[2]).replace(":","_colon").replace("?","_qm_").replace('/','_backslash_')
                     Path(folder_level_3).mkdir(parents=True, exist_ok=True)
                     print(folder_level_3)
-                    wrapper_to_folder(cursor,folder_level_3,str(entry[0]))
+                    #wrapper_to_folder(cursor,folder_level_3,str(entry[0]))
 
 
 
