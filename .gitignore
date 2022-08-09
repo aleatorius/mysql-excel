@@ -8,3 +8,5 @@ diff.txt
 noentry.txt
 warnings.txt
 *_course
+__pycache__
+out
