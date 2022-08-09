@@ -92,6 +92,60 @@ def get_wrapper_dirs(folder):
     else:
         return False
 
+def get_style(header_cells,sheet):
+    for col in sheet.columns:
+        max_length = 0
+        column = col[0].column_letter # Get the column name
+        for cell in col:
+            try: # Necessary to avoid error on empty cells
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = (max_length) 
+        sheet.column_dimensions[column].width = adjusted_width   
+    start=1
+    twocolor = ['00CCFFCC','00FFFF99','00C0C0C0','0033CCCC']
+    ccolor = twocolor[0]
+    twopattern = ['lightDown','darkGray']
+    for i in header_cells:
+        cell_header = sheet.cell(row=1, column=start)
+        double = Side(border_style="double", color="00008000")
+        cell_header.border = Border(top=double, left=double, right=double, bottom=double)
+        cell_header.font  = Font(b=True, color="00008000", size = 8)
+        cell_header.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False,  shrink_to_fit=True)
+        sheet.merge_cells(start_row=1, start_column=start, end_row=1, end_column=start+i-1)
+        for j in range(i):
+            cell_h = sheet.cell(row=2, column=start+j)
+            cell_h.font  = Font(b=True, color="00008000", size = 10)
+            cell_h.border = Border(bottom=double)
+            cell_h.alignment = Alignment(horizontal="general", vertical="bottom", wrap_text=False,  shrink_to_fit=True)
+            if j == 0:
+                cell_h.border = Border(bottom=double, left=double)
+        
+        ppattern = twopattern[0]
+        for l in range(3,sheet.max_row+1):
+            for j in range(i):
+                cell_ordinary = sheet.cell(row = l,column=start+j)
+                cell_ordinary.fill = PatternFill(ppattern, fgColor=ccolor)
+                thin = Side(border_style="thin", color="000000")
+                cell_ordinary.border = Border(top=thin, left=thin, right=thin, bottom=thin)
+            if ppattern == twopattern[0]:
+                ppattern = twopattern[1]
+            else:
+                ppattern = twopattern[0]
+        
+        start = start + i
+        if ccolor == twocolor[0]:
+            ccolor = twocolor[1]
+        else:
+            ccolor = twocolor[0]
+    
+    cell_h.border = Border(bottom=double, right=double) 
+    
+
+
+
 def main(folder):
     inputfolder = folder
     warnings_file = open('warnings.txt','w')
@@ -113,46 +167,44 @@ def main(folder):
         exit()
     abspath = os.path.abspath(folder_path)
     
+    header_cells = []
 
-    name_structure=[]
-    wrapper_structure = []
-    exercise_structure = []
-    structure = []
-    first_level = abspath.count(os.path.sep)
-    wrapper = folder_path/'wrapper.xlsx'
-    level=get_wrapper(wrapper=wrapper)
-    print(level[2],level[3][0])
-    header_0_wrapper = len(level[3][0])*level[2]    
-    header_wrapper = level[3][0]
-    
-    newline = []
-    newline.append(level[1])
-    print('Entry Point wrapper :',level)
-
-    name_structure.append(newline)
-    
-    wrapper_structure.append(level[0])
-
-    print(name_structure, wrapper_structure)
-    
-    
     wbout = Workbook()
     sheet_wbout = wbout.active
     sheet_wbout.title = "Lessons"
-    header_basic = ['Level 0','Level 1', 'Level 2', 'Level 3','Level 4','Action']
+    header_basic = ['Level 0','Level 1', 'Level 2', 'Level 3','Level 4','']
+    
     header = header_basic
     header_0 = (len(header)-1)*['Level names']
-    names_cols = len(header)-1
-    header_0.append('')
+    header_0.append('Action')
+    header_cells.append(len(header)-1)
+    header_cells.append(1)
     
-   
-    #sheet_wbout.append(newline)
+    
 
+
+    name_structure=[]
+    wrapper_structure = []
+    structure = []
     
-    #level_0
+    #entry level
+    wrapper = folder_path/'wrapper.xlsx'
+    level=get_wrapper(wrapper=wrapper)
     
+    header_0_wrapper = len(level[3][0])*level[2]    
+    header_wrapper = level[3][0]
+    header_cells.append(len(level[3][0]))
+    
+    newline = []
+    newline.append(level[1])
+    name_structure.append(newline)
+    wrapper_structure.append(level[0])
+ 
     first_time = True
     level = get_wrapper_dirs(folder_path)
+
+    print(header_cells)
+    
     for chapter in level:
         print(chapter)
         newline = ['']
@@ -184,12 +236,6 @@ def main(folder):
             newline.append(level[1])
             name_structure.append(newline)
             wrapper_structure.append(level[0])
-            #
-        
-            #print(name_structure)
-            
-
-            #print('Lesson wrapper :',level)
             sublessons = get_wrapper_dirs(folder)
             for sublesson in natsorted(sublessons):
                 #print(sublesson)
@@ -204,12 +250,7 @@ def main(folder):
                     newline.append(level[1])
                     name_structure.append(newline)
                     wrapper_structure.append(level[0])
-                    #
-        
-                    #print(name_structure)
-                    
 
-                    #print('sublesson wrapper :',level)
                     for sub_sublesson in sub_sublessons:
                         #print(chapter,": ",lesson,"-> ", sublesson,"-->>", sub_sublesson)
                         structure.append((chapter, lesson,sublesson,sub_sublesson))
@@ -220,6 +261,7 @@ def main(folder):
                         if first_time == True:
                             header_ex_id = level[2]
                             header_ex = level[3] 
+                            header_cells.append(len(header_ex))
                             first_time = False
                         else:
                             pass
@@ -261,9 +303,7 @@ def main(folder):
         else:
             linen = line+(len(header_basic)-ind-1+len(header_wrapper))*['']+info
         sheet_wbout.append(linen)
-    sheet_wbout.merge_cells(start_row=1, start_column=1, end_row=1, end_column=names_cols)
-    sheet_wbout.merge_cells(start_row=1, start_column=names_cols+2, end_row=1, end_column=names_cols+1+len(header_wrapper))
-    sheet_wbout.merge_cells(start_row=1, start_column=names_cols+2+len(header_wrapper), end_row=1, end_column=names_cols+1+len(header_wrapper)+len(header_ex))
+    get_style(header_cells=header_cells,sheet=sheet_wbout)
     wbout.save(inputfolder+'\lessons_structure.xlsx')
     wbout.close()        
     
