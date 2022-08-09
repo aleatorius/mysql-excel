@@ -24,11 +24,8 @@ def get_wrapper(wrapper):
         for cells in sheet.iter_cols(min_col=col_low,min_row=data_row, max_col=col_high, max_row=data_row):
             for cell in cells:
                 entry.append(cell.value)
-    #print(columns)
-    #print(entry)
     index = columns[0].index('Name')
     level = (entry,entry[index],names,columns)
-    #print(level)
     return level
 
 def get_exercise(wrapper):
@@ -84,7 +81,6 @@ def get_wrapper_dirs(folder):
             filepath = subdir + os.sep + name
             if filepath.endswith(".xlsx"):
                 if name == 'wrapper.xlsx':
-                    #print(filepath.split('\\'),name)
                     if subdir.count(os.path.sep) == local_depth:
                         local_level = dirs
     if local_level:
@@ -116,15 +112,10 @@ def get_style(header_cells,sheet):
         cell_header.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False,  shrink_to_fit=False)
         sheet.merge_cells(start_row=1, start_column=start, end_row=1, end_column=start+i-1)
         for j in range(i):
-            print(j)
-        
             cell_h = sheet.cell(row=2, column=start+j)
             cell_h.font  = Font(b=True, color="00008000", size = 10)
             cell_h.alignment = Alignment(horizontal="general", vertical="bottom", wrap_text=False,  shrink_to_fit=False)
-            print(cell_h.value)
-            
             if j == 0:
-                print(cell_h.value, cell_h.column_letter)
                 cell_h.border = Border(left=double, bottom=double)
             else:
                 cell_h.border = Border(bottom=double)
@@ -178,8 +169,6 @@ def main(folder):
         exit()
     abspath = os.path.abspath(folder_path)
     
-    
-
     wbout = Workbook()
     sheet_wbout = wbout.active
     sheet_wbout.title = "Lessons"
@@ -192,9 +181,6 @@ def main(folder):
     header_cells.append(len(header)-1)
     header_cells.append(1)
     
-    
-
-
     name_structure=[]
     wrapper_structure = []
     structure = []
@@ -203,7 +189,6 @@ def main(folder):
     #entry level
     wrapper = folder_path/'wrapper.xlsx'
     level=get_wrapper(wrapper=wrapper)
-    
     header_0_wrapper = len(level[3][0])*level[2]    
     header_wrapper = level[3][0]
     header_cells.append(len(level[3][0]))
@@ -215,38 +200,20 @@ def main(folder):
     root = 'C:\Source\Repos\mysql-excel'
     folders.append(os.path.abspath(folder_path).replace(root,'..'))
     
-    print(os.path.abspath(folder_path).replace(root,'..'))
-
  
     first_time = True
     level = get_wrapper_dirs(folder_path)
-
-    print(header_cells)
-    
     for chapter in level:
         print(chapter)
-        
         newline = ['']
         folder = folder_path/chapter
-        print(os.path.abspath(folder))
-        
         lessons = get_wrapper_dirs(folder)
-    
         wrapper = folder/'wrapper.xlsx'
         level=get_wrapper(wrapper=wrapper)
-
-        #print('Chapter wrapper :',level)
         newline.append(level[1])
         folders.append(os.path.abspath(folder).replace(root,'..'))
-        #print(newline)
-        #
-        
         name_structure.append(newline)
         wrapper_structure.append(level[0])
-        #print(name_structure)
-        
-        
-        
         
         for lesson in natsorted(lessons):
             print(lesson)
@@ -255,14 +222,13 @@ def main(folder):
             wrapper = folder/'wrapper.xlsx'
             level=get_wrapper(wrapper=wrapper)
 
-            newline = ['','']
+            newline = 2*['']
             newline.append(level[1])
             folders.append(os.path.abspath(folder).replace(root,'..'))
             name_structure.append(newline)
             wrapper_structure.append(level[0])
             sublessons = get_wrapper_dirs(folder)
             for sublesson in natsorted(sublessons):
-                #print(sublesson)
                 folder=folder_path/chapter/lesson/sublesson
                 sub_sublessons = get_wrapper_dirs(folder)
                 if sub_sublessons != False:
@@ -277,12 +243,10 @@ def main(folder):
                     wrapper_structure.append(level[0])
 
                     for sub_sublesson in sub_sublessons:
-                        #print(chapter,": ",lesson,"-> ", sublesson,"-->>", sub_sublesson)
                         structure.append((chapter, lesson,sublesson,sub_sublesson))
                         folder = folder_path/chapter/lesson/sublesson/sub_sublesson
                         wrapper = folder/'exercise.xlsx'
                         level = get_exercise(wrapper=wrapper)
-                        #print('exercise :',level)
                         if first_time == True:
                             header_ex_id = level[2]
                             header_ex = level[3] 
@@ -295,33 +259,23 @@ def main(folder):
                         folders.append(os.path.abspath(folder).replace(root,'..'))
                         name_structure.append(newline)
                         wrapper_structure.append(level[0])
-                        #
-                        #print(name_structure)
-                        
-
                 else:
-                    #print(chapter,": ",lesson,"-> ", sublesson)
                     structure.append((chapter,lesson,sublesson))
                     folder = folder_path/chapter/lesson/sublesson
                     wrapper = folder/'exercise.xlsx'
                     level = get_exercise(wrapper=wrapper)
-                    #print('exercise :',level)
                     newline = 3*['']
                     newline.append(level[1])
                     folders.append(os.path.abspath(folder).replace(root,'..'))
                     wrapper_structure.append(level[0])
-                    #
                     name_structure.append(newline)
 
     header_0 = header_0 + header_0_wrapper+header_ex+['Folders']
     header = header + header_wrapper+header_ex_id+['Relative path']
     header_cells = header_cells + [1]
-    print(header_cells, 'header_cells')
-    
     sheet_wbout.append(header_0)
     sheet_wbout.append(header)                
     for line,info,fl in zip(name_structure,wrapper_structure,folders):
-        #print(line)
         for ind,ex in enumerate(line):
             if ex != 0:
                 nonzero_index = ind
