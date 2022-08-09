@@ -113,15 +113,22 @@ def get_style(header_cells,sheet):
         double = Side(border_style="double", color="00008000")
         cell_header.border = Border(top=double, left=double, right=double, bottom=double)
         cell_header.font  = Font(b=True, color="00008000", size = 8)
-        cell_header.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False,  shrink_to_fit=True)
+        cell_header.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False,  shrink_to_fit=False)
         sheet.merge_cells(start_row=1, start_column=start, end_row=1, end_column=start+i-1)
         for j in range(i):
+            print(j)
+        
             cell_h = sheet.cell(row=2, column=start+j)
             cell_h.font  = Font(b=True, color="00008000", size = 10)
-            cell_h.border = Border(bottom=double)
-            cell_h.alignment = Alignment(horizontal="general", vertical="bottom", wrap_text=False,  shrink_to_fit=True)
+            cell_h.alignment = Alignment(horizontal="general", vertical="bottom", wrap_text=False,  shrink_to_fit=False)
+            print(cell_h.value)
+            
             if j == 0:
-                cell_h.border = Border(bottom=double, left=double)
+                print(cell_h.value, cell_h.column_letter)
+                cell_h.border = Border(left=double, bottom=double)
+            else:
+                cell_h.border = Border(bottom=double)
+
         
         ppattern = twopattern[0]
         for l in range(3,sheet.max_row+1):
@@ -140,8 +147,12 @@ def get_style(header_cells,sheet):
             ccolor = twocolor[1]
         else:
             ccolor = twocolor[0]
-    
-    cell_h.border = Border(bottom=double, right=double) 
+         
+    if header_cells[-1] == 1:
+        cell_h.border = Border(bottom=double, right=double,left=double)   
+    else:
+        cell_h.border = Border(bottom=double, right=double)   
+          
     
 
 
@@ -167,16 +178,17 @@ def main(folder):
         exit()
     abspath = os.path.abspath(folder_path)
     
-    header_cells = []
+    
 
     wbout = Workbook()
     sheet_wbout = wbout.active
     sheet_wbout.title = "Lessons"
-    header_basic = ['Level 0','Level 1', 'Level 2', 'Level 3','Level 4','']
+    header_basic = ['Level 0','Level 1', 'Level 2', 'Level 3','Level 4','Add/Del/Mod/Diff']
     
+    header_cells = []
     header = header_basic
     header_0 = (len(header)-1)*['Level names']
-    header_0.append('Action')
+    header_0.append('Actions')
     header_cells.append(len(header)-1)
     header_cells.append(1)
     
@@ -186,6 +198,7 @@ def main(folder):
     name_structure=[]
     wrapper_structure = []
     structure = []
+    folders = []
     
     #entry level
     wrapper = folder_path/'wrapper.xlsx'
@@ -199,6 +212,11 @@ def main(folder):
     newline.append(level[1])
     name_structure.append(newline)
     wrapper_structure.append(level[0])
+    root = 'C:\Source\Repos\mysql-excel'
+    folders.append(os.path.abspath(folder_path).replace(root,'..'))
+    
+    print(os.path.abspath(folder_path).replace(root,'..'))
+
  
     first_time = True
     level = get_wrapper_dirs(folder_path)
@@ -207,8 +225,11 @@ def main(folder):
     
     for chapter in level:
         print(chapter)
+        
         newline = ['']
         folder = folder_path/chapter
+        print(os.path.abspath(folder))
+        
         lessons = get_wrapper_dirs(folder)
     
         wrapper = folder/'wrapper.xlsx'
@@ -216,6 +237,7 @@ def main(folder):
 
         #print('Chapter wrapper :',level)
         newline.append(level[1])
+        folders.append(os.path.abspath(folder).replace(root,'..'))
         #print(newline)
         #
         
@@ -229,11 +251,13 @@ def main(folder):
         for lesson in natsorted(lessons):
             print(lesson)
             folder = folder_path/chapter/lesson
+            
             wrapper = folder/'wrapper.xlsx'
             level=get_wrapper(wrapper=wrapper)
 
             newline = ['','']
             newline.append(level[1])
+            folders.append(os.path.abspath(folder).replace(root,'..'))
             name_structure.append(newline)
             wrapper_structure.append(level[0])
             sublessons = get_wrapper_dirs(folder)
@@ -248,6 +272,7 @@ def main(folder):
 
                     newline = 3*['']
                     newline.append(level[1])
+                    folders.append(os.path.abspath(folder).replace(root,'..'))
                     name_structure.append(newline)
                     wrapper_structure.append(level[0])
 
@@ -267,6 +292,7 @@ def main(folder):
                             pass
                         newline = 4*['']
                         newline.append(level[1])
+                        folders.append(os.path.abspath(folder).replace(root,'..'))
                         name_structure.append(newline)
                         wrapper_structure.append(level[0])
                         #
@@ -282,26 +308,27 @@ def main(folder):
                     #print('exercise :',level)
                     newline = 3*['']
                     newline.append(level[1])
+                    folders.append(os.path.abspath(folder).replace(root,'..'))
                     wrapper_structure.append(level[0])
                     #
                     name_structure.append(newline)
 
-    header_0 = header_0 + header_0_wrapper+header_ex
-    header = header + header_wrapper+header_ex_id
-    print(header_0)
-    print(header)
+    header_0 = header_0 + header_0_wrapper+header_ex+['Folders']
+    header = header + header_wrapper+header_ex_id+['Relative path']
+    header_cells = header_cells + [1]
+    print(header_cells, 'header_cells')
     
     sheet_wbout.append(header_0)
     sheet_wbout.append(header)                
-    for line,info in zip(name_structure,wrapper_structure):
-        print(line)
+    for line,info,fl in zip(name_structure,wrapper_structure,folders):
+        #print(line)
         for ind,ex in enumerate(line):
             if ex != 0:
                 nonzero_index = ind
         if len(info) > 2:
-            linen = line+(len(header_basic)-ind-1)*['']+info
+            linen = line+(len(header_basic)-ind-1)*['']+info+len(header_ex)*['']+[fl]
         else:
-            linen = line+(len(header_basic)-ind-1+len(header_wrapper))*['']+info
+            linen = line+(len(header_basic)-ind-1+len(header_wrapper))*['']+info+[fl]
         sheet_wbout.append(linen)
     get_style(header_cells=header_cells,sheet=sheet_wbout)
     wbout.save(inputfolder+'\lessons_structure.xlsx')
