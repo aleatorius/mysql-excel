@@ -103,6 +103,7 @@ def main(folder,output_diff):
     exercise = folder_path/'exercise.xlsx'
    
     if exercise.exists():
+        istherediffoutput = False
         firstrun = True
         print("ok, exercise exists in this folder")
         wb = load_workbook(filename = exercise)
@@ -151,6 +152,7 @@ def main(folder,output_diff):
                                 diff = compare(entry=entry,data=output[0] )
                                 
                                 if False in diff:
+                                    istherediffoutput = True
                                     if firstrun == True:
                                         if os.path.isfile(output_diff):
                                              diff_file = open(output_diff,'a')
@@ -171,7 +173,10 @@ def main(folder,output_diff):
                                 exit() 
     else:
         print('No excel file in this folder')
-    diff_file.close
+    if istherediffoutput == True:
+        diff_file.close
+    else:
+        pass
     ser_file.close
     noentry_file.close      
 
