@@ -111,7 +111,6 @@ def get_style(header_cells,sheet):
     for col in sheet.columns:
         max_length = 0
         column = col[0].column_letter # Get the column name
-        print(column)
         for cell in col:
             if cell.row > 1:
                 try: # Necessary to avoid error on empty cells
