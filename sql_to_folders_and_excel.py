@@ -108,6 +108,21 @@ def get_confusionboxpage(cursor, wbout, input_data,title):
     return data_word,multi
 
 def get_style(header_cells,sheet):
+    for col in sheet.columns:
+        max_length = 0
+        column = col[0].column_letter # Get the column name
+        print(column)
+        for cell in col:
+            if cell.row > 1:
+                try: # Necessary to avoid error on empty cells
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))+2.7
+                except:
+                    pass
+            else:
+                pass
+        adjusted_width = (max_length) 
+        sheet.column_dimensions[column].width = adjusted_width   
     start=1
     twocolor = ['00CCFFCC','00FFFF99','00C0C0C0','0033CCCC']
     ccolor = twocolor[0]
@@ -122,10 +137,12 @@ def get_style(header_cells,sheet):
         for j in range(i):
             cell_h = sheet.cell(row=2, column=start+j)
             cell_h.font  = Font(b=True, color="00008000", size = 10)
-            cell_h.border = Border(bottom=double)
             cell_h.alignment = Alignment(horizontal="general", vertical="bottom", wrap_text=False,  shrink_to_fit=True)
             if j == 0:
-                cell_h.border = Border(bottom=double, left=double)
+                cell_h.border = Border(left=double, bottom=double)
+            else:
+                cell_h.border = Border(bottom=double)
+
         
         ppattern = twopattern[0]
         for l in range(3,sheet.max_row+1):
@@ -145,7 +162,10 @@ def get_style(header_cells,sheet):
         else:
             ccolor = twocolor[0]
     
-    cell_h.border = Border(bottom=double, right=double)    
+    if header_cells[-1] == 1:
+        cell_h.border = Border(bottom=double, right=double,left=double)   
+    else:
+        cell_h.border = Border(bottom=double, right=double)     
 
 def get_wordproperties(cursor,wbout,input_data,title):
     header_cells = []
@@ -488,7 +508,7 @@ def main():
                 folder_level_2 = folder_level_1+'/'+str(j[2])
                 Path(folder_level_2).mkdir(parents=True, exist_ok=True)
                 print(folder_level_2)
-                #wrapper_to_folder(cursor,folder_level_2,str(j[0]))
+                wrapper_to_folder(cursor,folder_level_2,str(j[0]))
                 sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(j[0])
                 cursor.execute(sqlcom)  
                 level_3 = [list(i) for i in cursor.fetchall()] 
@@ -497,7 +517,7 @@ def main():
                     folder_level_3 = folder_level_2+'/'+str(entry[2]).replace(":","_colon").replace("?","_qm_").replace('/','_backslash_')
                     Path(folder_level_3).mkdir(parents=True, exist_ok=True)
                     print(folder_level_3)
-                    #wrapper_to_folder(cursor,folder_level_3,str(entry[0]))
+                    wrapper_to_folder(cursor,folder_level_3,str(entry[0]))
 
 
 
