@@ -59,7 +59,6 @@ def get_sheet_structure(sheet):
                 col_id.append(cell.value)
         database_cols.append(col_id)
 
-    database_ranges_columns = zip(database,database_cols, ranges)
     return database, database_cols,ranges
 
 def diff_write(diff,diff_file,output,entry,data,sheet,row):
@@ -78,8 +77,12 @@ def noentry_write(noentry_file,entry,data,sheet,row):
     temp = get_column_interval(min_col, max_col)
     noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
 
-def main(folder):
-    diff_file = open('diff.txt','w')
+def main(folder,output_diff):
+    folder_path = Path(folder)
+    
+    
+    
+
     noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
     info = []
@@ -100,6 +103,7 @@ def main(folder):
     exercise = folder_path/'exercise.xlsx'
    
     if exercise.exists():
+        firstrun = True
         print("ok, exercise exists in this folder")
         wb = load_workbook(filename = exercise)
         for i in wb.sheetnames:
@@ -145,8 +149,21 @@ def main(folder):
                             output = [list(i) for i in cursor.fetchall()] 
                             if len(output) == 1:
                                 diff = compare(entry=entry,data=output[0] )
+                                
                                 if False in diff:
-                                   diff_write(diff=diff,diff_file=diff_file,output=output[0],entry=entry,data=data,sheet=sheet, row=row)
+                                    if firstrun == True:
+                                        if os.path.isfile(output_diff):
+                                             diff_file = open(output_diff,'a')
+                                        else:
+                                            diff_file = open(output_diff,'w')
+                                        firstrun == False
+                                        diff_file.write('Exercise :'+str(exercise)+'\n')
+                                        firstrun = False
+                                    else:
+                                        pass
+                                    
+                                    
+                                    diff_write(diff=diff,diff_file=diff_file,output=output[0],entry=entry,data=data,sheet=sheet, row=row)
                             elif len(output) == 0:
                                 noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
                             else:
@@ -161,9 +178,10 @@ def main(folder):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='python diff_folder_and_mysql.py -f foldername')
     parser.add_argument('-f',dest='folder')
+    parser.add_argument('-diff',dest='diff',default='diff.txt')
     args = parser.parse_args()
     if args.folder:
-        main(folder = args.folder)
+        main(folder = args.folder, diff=args.diff)
     else:
         folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
-        main(folder=folder)
+        main(folder=folder, output_diff='diff.txt')
