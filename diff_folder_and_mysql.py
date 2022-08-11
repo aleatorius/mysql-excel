@@ -1,6 +1,5 @@
 import pyodbc 
 import argparse
-
 from pathlib import Path
 import os
 from openpyxl import Workbook
@@ -70,26 +69,123 @@ def diff_write(diff,diff_file,output,entry,data,sheet,row):
             print(output[index],"is empty")
         else:
             pass
-        diff_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp[index])+str(min_row+row)+' ' + str(data[1][index]) +'"\n Excel: "'+ str(entry[index]) +'" db: "'+ str(output[index])+'"\n')
+        diff_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp[index])+str(min_row+row)+' ' + str(data[1][index]) +'"\n Excel: "'+ str(entry[index]) +'" db: "'+ str(output[index])+'"\n\n')
 
 def noentry_write(noentry_file,entry,data,sheet,row):
     (min_col, min_row, max_col, max_row) = data[-1]
     temp = get_column_interval(min_col, max_col)
-    noentry_file.write('Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n')
+    noentry_file.write('NO ENTRY! Sheet: "'+sheet.title+ '" Cell:"'+ str(temp)+str(min_row+row)+' ' + str(data[1]) +'"\n Excel: "'+ str(entry) +'\n\n')
+
+def excel_in_folder(excel,cursor,database,output_diff):
+
+    istherediffoutput = False
+    firstrun = True
+    
+    wb = load_workbook(filename = excel)
+    for i in wb.sheetnames:
+        print(i)
+        sheet = wb[i]
+        names,columns,ranges = get_sheet_structure(sheet = sheet)
+        
+        for row in range(2,sheet.max_row):
+            for data in zip(names,columns,ranges):
+                (col_low, row_low, col_high, row_high) = data[-1]
+                entry = []
+                for cells in sheet.iter_cols(min_col=col_low,min_row=row_low+row, max_col=col_high, max_row= row_low+row):
+                    for cell in cells:
+                        entry.append(cell.value)
+                
+                if all(x is None for x in entry):
+                    pass
+                else:
+                    if data[0] == 'WrapperExercises':
+                        #it should be defined by both columns
+                        output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
+                        if len(output) == 0:
+                            
+                            if firstrun == True:
+                                if os.path.isfile(output_diff):
+                                    diff_file = open(output_diff,'a')
+                                else:
+                                    diff_file = open(output_diff,'w')
+                                firstrun = False
+                                diff_file.write('Data file :'+str(excel)+'\n\n')      
+                            else:
+                                pass
+                            istherediffoutput = True
+                            noentry_write(noentry_file=diff_file,entry=entry,data=data,sheet=sheet, row=row)
+                        elif len(output)>1:
+                            print("ERROR, not unique entry, exiting ", data[0] )  
+                            exit()
+                        else:
+                            pass
+                    elif data[0] == 'TranscriptionConfusionBoxes':
+                        output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
+                        if len(output) ==0:
+                            if firstrun == True:
+                                if os.path.isfile(output_diff):
+                                    diff_file = open(output_diff,'a')
+                                else:
+                                    diff_file = open(output_diff,'w')
+                                firstrun = False
+                                diff_file.write('Data file :'+str(excel)+'\n\n')
+                            else:
+                                pass
+                            istherediffoutput = True
+                            noentry_write(noentry_file=diff_file,entry=entry,data=data,sheet=sheet, row=row)
+
+                        elif len(output)>1:
+                            print("ERROR, not unique entry, exiting ", data[0] )  
+                            exit()
+                        else:
+                            pass
+                    else:
+                        sqlcom = 'SELECT * FROM ['+database+'].[dbo].[' + data[0]+'] WHERE '
+                        sqlcom = sqlcom + str(data[1][0]) + ' = ' + str(entry[0])
+                        cursor.execute(sqlcom)
+                        output = [list(i) for i in cursor.fetchall()] 
+                        if len(output) == 1:
+                            diff = compare(entry=entry,data=output[0] )
+                            if False in diff:
+                                istherediffoutput = True
+                                if firstrun == True:
+                                    if os.path.isfile(output_diff):
+                                        diff_file = open(output_diff,'a')
+                                    else:
+                                        diff_file = open(output_diff,'w')
+                                    firstrun = False
+                                    diff_file.write('Data file :'+str(excel)+'\n\n')
+                                else:
+                                    pass
+                                diff_write(diff=diff,diff_file=diff_file,output=output[0],entry=entry,data=data,sheet=sheet, row=row)
+                        elif len(output) == 0:
+                            if firstrun == True:
+                                if os.path.isfile(output_diff):
+                                    diff_file = open(output_diff,'a')
+                                else:
+                                    diff_file = open(output_diff,'w')
+                                firstrun = False
+                                diff_file.write('Data file :'+str(excel)+'\n\n')
+                                    
+                            else:
+                                pass
+                            istherediffoutput = True
+                            noentry_write(noentry_file=diff_file,entry=entry,data=data,sheet=sheet, row=row)
+                        else:
+                            print('wtf', entry, output)
+                            exit()
+    if istherediffoutput == True:
+        diff_file.close
+    
 
 def main(folder,output_diff):
     folder_path = Path(folder)
-    
-    
-    
-
-    noentry_file = open('noentry.txt', 'w')
     ser_file = open('server_private.md','r')
     info = []
     for i in ser_file:
         info.append(i.split()[-1].replace("'",''))
     [server,database,username,password] = info
-    
+    ser_file.close
     #connect to the calst database
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
@@ -100,85 +196,15 @@ def main(folder,output_diff):
     else:
         print(' There is no such folder as "'+folder+'"','\n Please enter the correct folder name')
         exit()
-    exercise = folder_path/'exercise.xlsx'
+    excels = list(folder_path.glob('*.xlsx'))
+    for excel in excels:
+        if '~$' in str(excel):
+            pass
+        else:
+            excel_in_folder(cursor=cursor,database=database,output_diff=output_diff,excel=excel)
+    
    
-    if exercise.exists():
-        istherediffoutput = False
-        firstrun = True
-        print("ok, exercise exists in this folder")
-        wb = load_workbook(filename = exercise)
-        for i in wb.sheetnames:
-            print(i)
-            sheet = wb[i]
-            names,columns,ranges = get_sheet_structure(sheet = sheet)
-           
-            for row in range(2,sheet.max_row):
-                for data in zip(names,columns,ranges):
-                    (col_low, row_low, col_high, row_high) = data[-1]
-                    entry = []
-                    for cells in sheet.iter_cols(min_col=col_low,min_row=row_low+row, max_col=col_high, max_row= row_low+row):
-                        for cell in cells:
-                            entry.append(cell.value)
-                    
-                    if all(x is None for x in entry):
-                        pass
-                    else:
-                        if data[0] == 'WrapperExercises':
-                            #it should be defined by both columns
-                            output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
-                            if len(output) == 0:
-                                noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
-                            elif len(output)>1:
-                                print("ERROR, not unique entry, exiting ", data[0] )  
-                                exit()
-                            else:
-                                pass
-                        elif data[0] == 'TranscriptionConfusionBoxes':
-                            output = get_full_request(database=database,cursor=cursor,data=data, entry=entry)
-                            if len(output) ==0:
-                                noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
-
-                            elif len(output)>1:
-                                print("ERROR, not unique entry, exiting ", data[0] )  
-                                exit()
-                            else:
-                                pass
-                        else:
-                            sqlcom = 'SELECT * FROM ['+database+'].[dbo].[' + data[0]+'] WHERE '
-                            sqlcom = sqlcom + str(data[1][0]) + ' = ' + str(entry[0])
-                            cursor.execute(sqlcom)
-                            output = [list(i) for i in cursor.fetchall()] 
-                            if len(output) == 1:
-                                diff = compare(entry=entry,data=output[0] )
-                                
-                                if False in diff:
-                                    istherediffoutput = True
-                                    if firstrun == True:
-                                        if os.path.isfile(output_diff):
-                                             diff_file = open(output_diff,'a')
-                                        else:
-                                            diff_file = open(output_diff,'w')
-                                        firstrun == False
-                                        diff_file.write('Exercise :'+str(exercise)+'\n')
-                                        firstrun = False
-                                    else:
-                                        pass
-                                    
-                                    
-                                    diff_write(diff=diff,diff_file=diff_file,output=output[0],entry=entry,data=data,sheet=sheet, row=row)
-                            elif len(output) == 0:
-                                noentry_write(noentry_file=noentry_file,entry=entry,data=data,sheet=sheet, row=row)
-                            else:
-                                print('wtf', entry, output)
-                                exit() 
-    else:
-        print('No excel file in this folder')
-    if istherediffoutput == True:
-        diff_file.close
-    else:
-        pass
-    ser_file.close
-    noentry_file.close      
+   
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='python diff_folder_and_mysql.py -f foldername')
@@ -188,5 +214,6 @@ if __name__ == "__main__":
     if args.folder:
         main(folder = args.folder, diff=args.diff)
     else:
-        folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
-        main(folder=folder, output_diff='diff.txt')
+        Ъfolder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
+        folder = 'C:\Source\Repos\mysql-excel\Spanish_course\Beginner\Lesson 1'
+        main(folder=folder, output_diff='difft.txt')
