@@ -151,7 +151,7 @@ def get_style(header_cells,sheet):
 
 
 
-def main(folder):
+def main(folder, output):
     inputfolder = folder
     warnings_file = open('warnings.txt','w')
     ser_file = open('server_private.md','r')
@@ -288,7 +288,7 @@ def main(folder):
             linen = line+(len(header_basic)-ind-1+len(header_wrapper))*['']+info+[fl]
         sheet_wbout.append(linen)
     get_style(header_cells=header_cells,sheet=sheet_wbout)
-    wbout.save(inputfolder+'\lessons_structure.xlsx')
+    wbout.save(inputfolder+'\\'+output)
     wbout.close()        
     
 
@@ -296,12 +296,14 @@ def main(folder):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='python course_structure_db_excel.py -f foldername')
     parser.add_argument('-f',dest='folder')
+    parser.add_argument('-o',dest='output')
     args = parser.parse_args()
     if args.folder:
-        main(folder = args.folder)
+        main(folder = args.folder, output=args.output)
     else:
         #folder='C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\\Numbers 1'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 2\\Nationalities'
         folder = 'C:\Source\Repos\mysql-excel\Spanish_course'
-        main(folder=folder)
+        output = 'lessons_structure.xlsx'
+        main(folder=folder,output= output)
