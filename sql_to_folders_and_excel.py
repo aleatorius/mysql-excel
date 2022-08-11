@@ -5,9 +5,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
-def extract(sqlcommand,cursor):
-    cursor.execute(sqlcommand)
-    return cursor.fetchall()[0][0]
 
 def get_header(cursor,table):
     sqlcom = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = N'"+table+"'"
