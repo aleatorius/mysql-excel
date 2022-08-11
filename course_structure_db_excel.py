@@ -146,7 +146,16 @@ def get_style(header_cells,sheet):
         cell_h.border = Border(bottom=double, right=double,left=double)   
     else:
         cell_h.border = Border(bottom=double, right=double)   
-          
+    
+    names,columns,ranges = get_sheet_structure(sheet = sheet)
+    (col_low, row_low, col_high, row_high) = ranges[names.index('Folders')]
+       
+    for cells in sheet.iter_cols(min_col=col_low,min_row=row_low+2, max_col=col_high, max_row=sheet.max_row):
+        for cell in cells:
+            if cell.value:
+                cell.hyperlink = cell.value
+    
+                        
     
 
 
@@ -304,6 +313,6 @@ if __name__ == "__main__":
         #folder='C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\\Numbers 1'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 2\\Nationalities'
-        folder = 'C:\Source\Repos\mysql-excel\Spanish_course'
+        folder = 'C:\Source\Repos\mysql-excel\Spanish_course_styled'
         output = 'lessons_structure.xlsx'
         main(folder=folder,output= output)
