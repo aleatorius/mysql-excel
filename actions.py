@@ -20,7 +20,7 @@ def main(structure_file):
     structure_path  = Path(structure_file)
     if structure_path.exists():
 
-        wb_s = load_workbook(filename='C:\Source\Repos\mysql-excel\Spanish_course\lesson_structure.xlsx')
+        wb_s = load_workbook(str(structure_path))
         sheet = wb_s.active
         names,columns,ranges = get_sheet_structure(sheet = sheet)
         (col_low, row_low, col_high, row_high) = ranges[names.index('Actions')]
@@ -33,15 +33,16 @@ def main(structure_file):
                         (col_l, row_l, col_h, row_h) = ranges[names.index('Folders')]
                         cell_f = sheet.cell(column=col_l, row=cell.row)
                         to_diff.append(cell_f.value.replace('..','C:\Source\Repos\mysql-excel'))
-
+        print(to_diff)
         for todiff in to_diff:
+            print(todiff)
             diff_folder_and_mysql.main(folder=todiff, output_diff='test.txt')
     else:
         print(str(structure_path.parent))
         print(str(structure_path.name))
         
         course_structure_db_excel.main(folder=str(structure_path.parent), output=str(structure_path.name ))
-        print("No file with lesson info, have created one. You can ad actions here: "+ str(structure_path))
+        print("No file with lesson info, have created one. You can add actions here: "+ str(structure_path))
     
   
 if __name__ == "__main__":

@@ -196,13 +196,18 @@ def main(folder,output_diff):
     else:
         print(' There is no such folder as "'+folder+'"','\n Please enter the correct folder name')
         exit()
+
     excels = list(folder_path.glob('*.xlsx'))
     for excel in excels:
         if '~$' in str(excel):
             pass
-        else:
+        elif 'wrapper.xlsx' in str(excel):
             excel_in_folder(cursor=cursor,database=database,output_diff=output_diff,excel=excel)
-    
+        elif 'exercise.xlsx' in str(excel):
+            excel_in_folder(cursor=cursor,database=database,output_diff=output_diff,excel=excel)
+        else:
+            pass
+
    
    
 
