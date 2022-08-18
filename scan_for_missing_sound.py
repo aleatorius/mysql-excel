@@ -14,6 +14,7 @@ def missing_in_excel(excel):
     first_pron = True
     wb = load_workbook(filename = excel)
     meta_accum = []
+    header_cells = []
     for i in wb.sheetnames:
         sheet = wb[i]
         
@@ -23,6 +24,8 @@ def missing_in_excel(excel):
             fails = []
             failed_row = []
             names,columns,ranges = get_sheet_structure(sheet = sheet)
+            print(columns)
+            
             for row in range(2,sheet.max_row):
                 first_pron = True
                 meta = []
@@ -38,6 +41,7 @@ def missing_in_excel(excel):
                         if all(x is None for x in entry):
                             fails.append(row)
                             failed_row.append(meta)
+                            break
                         else:
                             pass
                     else:
@@ -56,9 +60,15 @@ def missing_in_excel(excel):
                 if firstrun == True:
                     firstrun = False
                     header = ['sheet','row']
-                    for col in columns[:len(accum[-1])]:
-                      header = header + col
+                    header_cells = [1,1]
+                    for index,col in enumerate(columns):
+                        if index < 3:
+                            print(col)
+                            header = header + col
+                            header_cells.append(len(col))
+                    print(header_cells)
                     meta_accum.append(header)
+                 
                 else:
                     pass
                 meta_accum = meta_accum+accum
@@ -68,7 +78,7 @@ def missing_in_excel(excel):
         else:
             pass
       
-    return meta_accum     
+    return meta_accum,header_cells     
 
  
 def main(folder,output_diff):
@@ -85,7 +95,7 @@ def main(folder,output_diff):
   
     excel = folder_path/'exercise.xlsx'
     output = missing_in_excel(excel=excel)
-    for i in output:
+    for i in output[0]:
         print(i)
   
 
