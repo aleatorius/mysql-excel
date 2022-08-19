@@ -221,6 +221,6 @@ if __name__ == "__main__":
     if args.folder:
         main(folder = args.folder, diff=args.diff)
     else:
-        Ъfolder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
+        #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
         folder = 'C:\Source\Repos\mysql-excel\Spanish_course\Beginner\Lesson 1'
         main(folder=folder, output_diff='difft.txt')
