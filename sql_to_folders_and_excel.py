@@ -482,7 +482,7 @@ def main():
         #wrapper_to_folder(cursor,"Test","156")
         wrapper_to_folder(cursor,"Test","1336")
     else:  
-        course = 'Spanish'
+        course = 'Greek'
         sqlcom = "SELECT * FROM [CalstContent].[dbo].[Wrappers] where [Name] = '"+course+"EntryPoint'"
         cursor.execute(sqlcom)  
         data = [list(i) for i in cursor.fetchall()] 

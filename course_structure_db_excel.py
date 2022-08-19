@@ -15,15 +15,21 @@ from diff_folder_and_mysql import get_sheet_structure
 
 def get_wrapper(wrapper):
     wb = load_workbook(filename = wrapper)
+    print(wrapper)
     sheet = wb['Wrappers']
     names,columns,ranges = get_sheet_structure(sheet = sheet)
+    print(names)
+
     data_row = sheet.max_row
     entry = []
     for data in zip(names,columns,ranges):
         (col_low, row_low, col_high, row_high) = data[-1]
-        for cells in sheet.iter_cols(min_col=col_low,min_row=data_row, max_col=col_high, max_row=data_row):
-            for cell in cells:
-                entry.append(cell.value)
+        if data[0] == 'Wrappers':
+            for cells in sheet.iter_cols(min_col=col_low,min_row=data_row, max_col=col_high, max_row=data_row):
+                for cell in cells:
+                    entry.append(cell.value)
+        else:
+            pass
     index = columns[0].index('Name')
     level = (entry,entry[index],names,columns)
     return level
@@ -275,12 +281,15 @@ def main(folder, output):
                     structure.append((chapter,lesson,sublesson))
                     folder = folder_path/chapter/lesson/sublesson
                     wrapper = folder/'exercise.xlsx'
-                    level = get_exercise(wrapper=wrapper)
-                    newline = 3*['']
-                    newline.append(level[1])
-                    folders.append(os.path.abspath(folder).replace(root,'..'))
-                    wrapper_structure.append(level[0])
-                    name_structure.append(newline)
+                    if wrapper.exists():
+                        level = get_exercise(wrapper=wrapper)
+                        newline = 3*['']
+                        newline.append(level[1])
+                        folders.append(os.path.abspath(folder).replace(root,'..'))
+                        wrapper_structure.append(level[0])
+                        name_structure.append(newline)
+                    else:
+                        pass
 
     header_0 = header_0 + header_0_wrapper+header_ex+['Folders']
     header = header + header_wrapper+header_ex_id+['Relative path']
@@ -313,6 +322,6 @@ if __name__ == "__main__":
         #folder='C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\\Numbers 1'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 2\\Nationalities'
-        folder = 'C:\Source\Repos\mysql-excel\Spanish_course_styled'
+        folder = 'C:\Source\Repos\mysql-excel\Greek_course_styled'
         output = 'lessons_structure.xlsx'
         main(folder=folder,output= output)

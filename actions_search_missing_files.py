@@ -93,15 +93,18 @@ def main(folder):
         wb_s = load_workbook(str(structure_path))
         sheet = wb_s.active
         to_diff = []
+        print(str(structure_path))
         
         exercise_col = get_column(sheet=sheet,row=2,name='Exercise_Id')
         folder_col = get_column(sheet=sheet,row=1,name='Folders')
-        
+        print(exercise_col,folder_col)
         for cells in sheet.iter_cols(min_col=exercise_col,min_row=3, max_col=exercise_col, max_row=sheet.max_row):
             for cell in cells:
+                print(cell.value)
                 if cell.value:
                     if cell.value != None:
                         cell_f = sheet.cell(column=folder_col, row=cell.row)
+                        print(cell_f.value)
                         path_folder = str(path.parent)+cell_f.value.replace('..','')
                         to_diff.append(path_folder)
         print(to_diff)
@@ -137,6 +140,6 @@ def main(folder):
   
 if __name__ == "__main__":
 
-    #file = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\lessons_structure.xlsx'
-    folder = 'G:\\My Drive\\CALST_courses\\Spanish_course_styled\\'
+    folder = 'C:\\Source\\Repos\\mysql-excel\\Greek_course_styled\\'
+    #folder = 'G:\\My Drive\\CALST_courses\\Spanish_course_styled\\'
     main(folder=folder)

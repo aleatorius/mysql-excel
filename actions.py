@@ -67,5 +67,5 @@ def main(folder):
 if __name__ == "__main__":
 
     #file = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\lessons_structure.xlsx'
-    folder = 'G:\\My Drive\\CALST_courses\\Spanish_course_styled\\'
+    folder = 'C:\\Source\\Repos\\mysql-excel\\Greek_course_styled\\'
     main(folder=folder)
