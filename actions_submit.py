@@ -1,3 +1,4 @@
+from typing import ValuesView
 from natsort import natsorted
 from itertools import groupby
 from pathlib import Path
@@ -31,6 +32,7 @@ def check_exerciseid(wb_s,cursor,row):
     sheet = wb_s['Lessons']
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     
+    
     min_col, min_row,max_col,max_row=ranges[names.index('WrapperExercises')]
     data = []
     coord = []
@@ -39,7 +41,7 @@ def check_exerciseid(wb_s,cursor,row):
         for cell in cells:
             data.append(cell.value)
             coord.append((cell.row,cell.column))
-    print(data, ids, coord)
+    print("excel data: ",data, ids, coord)
     
     #compare wrapper id of an exercise with id of its parent folder from Wrappers columns    
     min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
@@ -57,7 +59,7 @@ def check_exerciseid(wb_s,cursor,row):
             Wrapper_Id = sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value
     #check where whrapper_id coincides with wrapper id, if not, replace with parents id
     if data[ids.index('Wrapper_Id')] == Wrapper_Id:
-        print(sheet.cell(row=coord[ids.index('Wrapper_Id')][0], column=coord[ids.index('Wrapper_Id')][1]).value,'here')
+        pass
     else:
         sheet.cell(row=coord[ids.index('Wrapper_Id')][0], column=coord[ids.index('Wrapper_Id')][1]).value=Wrapper_Id
     #check if it has an exercise id 
@@ -66,12 +68,12 @@ def check_exerciseid(wb_s,cursor,row):
         print('already exists the entry in the excel file, checking for existance in the database')
         sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[WrapperExercises] where Exercise_Id = ' + str(data[ids.index('Exercise_Id')]) + ' AND Wrapper_Id = '+str(Wrapper_Id)
         cursor.execute(sqlcommand)
-        
         list = cursor.fetchall()
         if not list:
             Create_Entry = True
         else:
             print('db entry exists')
+            Exercise_Id = data[ids.index('Exercise_Id')]
     else:
         Create_Entry = True
 
@@ -79,19 +81,16 @@ def check_exerciseid(wb_s,cursor,row):
         print('creating an entry')
         cursor.execute('SELECT MAX(Id) AS maximum FROM Exercises')
         Exercise_Id = cursor.fetchall()[0][0]+1
-        print(Exercise_Id)
         sqlcommand = 'INSERT INTO [dbo].[WrapperExercises] ([Wrapper_Id],[Exercise_Id]) VALUES '
         list = sqlcommand.split()[3].split(',')
-        print(list)
         values = sqlcommand.split()[3].replace('[Wrapper_Id]',str(Wrapper_Id)).replace('[Exercise_Id]',str(Exercise_Id))
         sqlcommand = sqlcommand + values
-        
         cursor.execute(sqlcommand)
         sheet.cell(row=coord[ids.index('Exercise_Id')][0], column=coord[ids.index('Exercise_Id')][1]).value = Exercise_Id
         
     else:
         pass
-    return Create_Entry
+    return Create_Entry,Wrapper_Id,Exercise_Id
 
 
 
@@ -101,6 +100,7 @@ def main(folder,cursor):
     structure_path  = Path(folder+'\\lessons_structure.xlsx')
     firstrun = True
     if structure_path.exists():
+        #check actions column for the command "submit"
         wb_s = load_workbook(str(structure_path))
         sheet = wb_s['Lessons']
         to_submit = []
@@ -108,20 +108,65 @@ def main(folder,cursor):
         action_col = get_column(sheet=sheet, row = 1, name='Actions')
         exercise_col = get_column(sheet=sheet,row=2,name='Exercise_Id')
         folder_col = get_column(sheet=sheet,row=1,name='Folders')
-        print(exercise_col,folder_col, action_col)
         
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
                 if cell.value == 'submit':
                     to_submit.append(cell.row)
-        print(to_submit)
+        print('rows to_submit: ', to_submit)
         
         
         for row in to_submit:
-            if check_exerciseid(wb_s=wb_s, cursor=cursor, row=row):
+            Create_Entry, Wrapper_Id, Exercise_Id = check_exerciseid(wb_s=wb_s, cursor=cursor, row=row)
+            if Create_Entry:
                 wb_s.save(filename=(str(structure_path))) 
             else:
                 pass
+
+            exercise_path = Path(sheet.cell(row=row, column=folder_col).value.replace('..',str(path.parent)))
+            exercise_file = exercise_path/'exercise.xlsx'
+            print(str(exercise_file))
+            wb = load_workbook(str(exercise_file))
+            sheet = wb['Exercise']
+            names, columns,ranges = get_sheet_structure(sheet=sheet)
+            print(names, columns,ranges)
+            #check wrapper exercises
+            min_col,min_row, max_col, max_row = ranges[names.index('WrapperExercises')]
+            ids = []
+            for cells in sheet.iter_cols(min_col=min_col,min_row=2, max_col=max_col, max_row=2):
+                for cell in cells:
+                    ids.append(cell.value)
+            
+            
+            values = []
+            for cells in sheet.iter_cols(min_col=min_col,min_row=3, max_col=max_col, max_row=3):
+                for cell in cells:
+                    values.append((cell.value,cell.column))
+            print(values)
+            Edit_Excel = False
+            if values[ids.index('Wrapper_Id')][0] != Wrapper_Id:
+                print('wrapper_id', str(Wrapper_Id),values[ids.index('Wrapper_Id')][0])
+                sheet.cell(row=3, column=values[ids.index('Wrapper_Id')][1]).value=Wrapper_Id
+                Edit_Excel = True
+            else:
+                pass
+            if values[ids.index('Exercise_Id')][0] != Exercise_Id:
+                print('exercise_id', str(Exercise_Id),values[ids.index('Exercise_Id')][0])
+                sheet.cell(row=3, column=values[ids.index('Exercise_Id')][1]).value = Exercise_Id
+                Edit_Excel = True
+            else:
+                pass
+            if Edit_Excel:
+               wb.save(str(exercise_file))
+            else:
+                pass
+            
+
+            
+
+
+            
+    
 
           
                
