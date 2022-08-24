@@ -1,24 +1,5 @@
-from natsort import natsorted
-from itertools import groupby
 from pathlib import Path
 from openpyxl import load_workbook
-from openpyxl.utils.cell import get_column_interval
-from openpyxl import Workbook
-from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
-from openpyxl.worksheet.table import Table, TableStyleInfo
-
-
-def get_column(sheet, row, name):
-    col = []
-    for cells in sheet.iter_cols(min_col=1,min_row=row, max_col=sheet.max_column, max_row=row):
-        for cell in cells:
-            if cell.value == name:
-                col.append(cell.column)
-    if len(col) == 1:
-        return col[0]
-    else:
-        print('Warning! Several cols with name '+name+ ' exiting')
-        exit()
 
 
 def get_sheet_structure(sheet):
@@ -50,7 +31,9 @@ def get_sheet_structure(sheet):
 
 
 def main(folder):
+
     #main code, can be referenced from another codes as well
+
     path = Path(folder)
     exercise_path  = path/'exercise_template.xlsx'
     if exercise_path.exists():
@@ -99,16 +82,17 @@ def main(folder):
         print(entries)
         #it is not that full now, only first two rows are not empty -- 
         #[['Words', None, None], ['Id', 'Text', 'LanguageId'], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None], [None, None, None]]
-        
-        #ok, we want to add the following word list together with language id 
-        #word list to enter:
+        # take into account that merged cells are printed like this ['Words', None, None]
 
+        #ok, we want to add the following word list together with its language ids 
+     
         word_list = [('boka',5),('poka',5),('sembra',5),('sempra',5)]
+
         for row,word in enumerate(word_list):
             sheet.cell(row=row+3,column=col_min+1).value = word[0]
             sheet.cell(row=row+3,column=col_min+2).value = word[1]
         wb.save(str(path/'exercise_new.xlsx'))
-
+        #check the file
 
 
 
