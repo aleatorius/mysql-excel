@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.util import _MIN_COMMON_LEN
 from openpyxl import load_workbook
 
 
@@ -87,10 +88,13 @@ def main(folder):
         #ok, we want to add the following word list together with its language ids 
      
         word_list = [('boka',5),('poka',5),('sembra',5),('sempra',5)]
+        #that's into position *text* and *languageid*
 
+        text_column = col_min+ table_cols[names_of_tables.index('Words')].index('Text')
+        languageid_column = col_min + table_cols[names_of_tables.index('Words')].index('LanguageId')
         for row,word in enumerate(word_list):
-            sheet.cell(row=row+3,column=col_min+1).value = word[0]
-            sheet.cell(row=row+3,column=col_min+2).value = word[1]
+            sheet.cell(row=row+3,column=text_column).value = word[0]
+            sheet.cell(row=row+3,column=languageid_column).value = word[1]
         wb.save(str(path/'exercise_new.xlsx'))
         #check the file
 

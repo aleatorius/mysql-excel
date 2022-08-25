@@ -27,7 +27,7 @@ def get_column(sheet, row, name):
         print('Warning! Several cols with name '+name+ ' exiting')
         exit()
 
-def check_exerciseid(wb_s,cursor,row):
+def check_exerciseid_in_structure(wb_s,cursor,row):
     #it checks wrapper and wrappereercise for id and wrapper_id and for exercise_id
     sheet = wb_s['Lessons']
     names,columns,ranges = get_sheet_structure(sheet = sheet)
@@ -117,27 +117,24 @@ def main(folder,cursor):
         
         
         for row in to_submit:
-            Create_Entry, Wrapper_Id, Exercise_Id = check_exerciseid(wb_s=wb_s, cursor=cursor, row=row)
+            Create_Entry, Wrapper_Id, Exercise_Id = check_exerciseid_in_structure(wb_s=wb_s, cursor=cursor, row=row)
             if Create_Entry:
                 wb_s.save(filename=(str(structure_path))) 
             else:
                 pass
-
+            #open an exercise
             exercise_path = Path(sheet.cell(row=row, column=folder_col).value.replace('..',str(path.parent)))
             exercise_file = exercise_path/'exercise.xlsx'
             print(str(exercise_file))
             wb = load_workbook(str(exercise_file))
             sheet = wb['Exercise']
+
             names, columns,ranges = get_sheet_structure(sheet=sheet)
             print(names, columns,ranges)
-            #check wrapper exercises
+            #check WrapperExercises values
             min_col,min_row, max_col, max_row = ranges[names.index('WrapperExercises')]
-            ids = []
-            for cells in sheet.iter_cols(min_col=min_col,min_row=2, max_col=max_col, max_row=2):
-                for cell in cells:
-                    ids.append(cell.value)
-            
-            
+            ids = columns[names.index('WrapperExercises')]
+
             values = []
             for cells in sheet.iter_cols(min_col=min_col,min_row=3, max_col=max_col, max_row=3):
                 for cell in cells:
@@ -156,6 +153,33 @@ def main(folder,cursor):
                 Edit_Excel = True
             else:
                 pass
+            
+            min_col,min_row, max_col, max_row = ranges[names.index('Exercises')]
+            ids = columns[names.index('Exercises')]
+
+            values = []
+            for cells in sheet.iter_cols(min_col=min_col,min_row=3, max_col=max_col, max_row=3):
+                for cell in cells:
+                    values.append((cell.value,cell.column))
+            print(values)
+        
+           
+            if values[ids.index('Id')][0] != Exercise_Id:
+                print('exercise_id', str(Exercise_Id),values[ids.index('Id')][0])
+                sheet.cell(row=3, column=values[ids.index('Id')][1]).value = Exercise_Id
+                Edit_Excel = True
+            else:
+                pass
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
             if Edit_Excel:
                wb.save(str(exercise_file))
             else:
