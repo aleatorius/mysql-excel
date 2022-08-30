@@ -224,6 +224,7 @@ def work_on_exercises_sheet(wb,cursor,cnxn, Wrapper_Id, Exercise_Id):
 
 
 
+
 def main(folder,cursor, cnxn):
     path = Path(folder)
     print(path.parent)
@@ -231,13 +232,12 @@ def main(folder,cursor, cnxn):
     firstrun = True
     if structure_path.exists():
         #check actions column for the command "submit"
-        wb_s = load_workbook(str(structure_path))
-        sheet = wb_s['Lessons']
+        wb_structure = load_workbook(str(structure_path))
+        sheet = wb_structure['Lessons']
         to_submit = []
         print(str(structure_path))
         action_col = get_column(sheet=sheet, row = 1, name='Actions')
-        exercise_col = get_column(sheet=sheet,row=2,name='Exercise_Id')
-        folder_col = get_column(sheet=sheet,row=1,name='Folders')
+        folder_col = get_column(sheet=sheet, row=1, name='Folders')
         
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
@@ -248,9 +248,9 @@ def main(folder,cursor, cnxn):
         
         for row in to_submit:
             #structure file changes
-            Create_Entry, Wrapper_Id, Exercise_Id = check_exerciseid_in_structure(wb_s=wb_s, cursor=cursor, row=row)
+            Create_Entry, Wrapper_Id, Exercise_Id = check_exerciseid_in_structure(wb_s=wb_structure, cursor=cursor, row=row)
             if Create_Entry:
-                wb_s.save(filename=(str(structure_path))) 
+                wb_structure.save(filename=(str(structure_path))) 
             else:
                 pass
             #open an exercise.xlsx
@@ -258,10 +258,10 @@ def main(folder,cursor, cnxn):
             exercise_path = Path(sheet.cell(row=row, column=folder_col).value.replace('..',str(path.parent)))
             exercise_file = exercise_path/'exercise.xlsx'
             print(str(exercise_file))
-            wb = load_workbook(str(exercise_file))
-            Edit_Excel = work_on_exercises_sheet(wb=wb,cursor=cursor, cnxn=cnxn, Wrapper_Id=Wrapper_Id,Exercise_Id=Exercise_Id)
+            wb_exercise = load_workbook(str(exercise_file))
+            Edit_Excel = work_on_exercises_sheet(wb=wb_exercise,cursor=cursor, cnxn=cnxn, Wrapper_Id=Wrapper_Id,Exercise_Id=Exercise_Id)
             if Edit_Excel:
-                 wb.save(str(exercise_file))
+                 wb_exercise.save(str(exercise_file))
             else:
                 pass
             
@@ -271,7 +271,7 @@ def main(folder,cursor, cnxn):
             mp = []
             case_nw = False
             nw = []
-            for sheetname in wb.sheetnames:
+            for sheetname in wb_exercise.sheetnames:
                 if 'Vocab' in  sheetname:
                     case_vocab = True
                     vocab.append(sheetname)
