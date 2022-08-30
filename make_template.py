@@ -43,6 +43,8 @@ def template_out_of_exercise(folder):
     folder_path = Path(folder)
     excel = folder_path/'exercise.xlsx'
     excel_out = folderout_path/'exercise_template.xlsx'
+    if excel.exists():
+        print(str(excel), " exists")
     wb = load_workbook(filename = excel)
     for i in wb.sheetnames:
         print(i)
@@ -53,8 +55,9 @@ def template_out_of_exercise(folder):
                 sheet.cell(column=col, row=row).value = None
     
         
-    wb.save(excel_out)
-
+    wb.save(str(excel_out))
+    if excel_out.exists():
+        print(str(excel_out), " exists")
 def main(folder):
     
     

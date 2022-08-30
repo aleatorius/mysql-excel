@@ -15,6 +15,10 @@ from diff_folder_and_mysql import get_sheet_structure
 import pyodbc 
 
 
+def all_equal(iterable):
+    g = groupby(iterable)
+    return next(g, True) and not next(g, False)
+
 
 def get_column(sheet, row, name):
     col = []
@@ -162,6 +166,8 @@ def work_on_exercises_sheet(wb,cursor,cnxn, Wrapper_Id, Exercise_Id):
         sqlcommand = sqlcommand + values
         print(sqlcommand)
         cursor.execute(sqlcommand)
+    else:
+        pass
 
 
     #fill in properties, check for exercise id and existence in the db
@@ -223,6 +229,31 @@ def work_on_exercises_sheet(wb,cursor,cnxn, Wrapper_Id, Exercise_Id):
     return Edit_Excel
 
 
+def indices(lst, item):
+    return [i for i, x in enumerate(lst) if x == item]
+
+def get_entry_by_name(sheet, table_name, names, columns,ranges, row):
+    entries = []
+    table_indices = indices(names, table_name)
+    for index in table_indices:
+        entry = []
+        min_col, min_row,max_col,max_row=ranges[index]
+        range = (min_col, row, max_col, row) 
+        for cells in sheet.iter_cols(min_col=min_col,min_row=row, max_col=max_col, max_row=row):
+            for cell in cells:
+                entry.append(cell.value)
+        entries.append((entry,range,columns[index]))
+    return entries
+
+
+def replace_entry(sheet,entry, entry_range):
+    min_col, min_row,max_col,max_row=entry_range
+    index = 0
+    for col in range(min_col,max_col+1):
+        cell = sheet.cell(row=min_row, column=col)
+        cell.value = entry[index]
+        index = index + 1
+
 
 
 def main(folder,cursor, cnxn):
@@ -246,16 +277,16 @@ def main(folder,cursor, cnxn):
         print('rows to_submit: ', to_submit)
         
         
-        for row in to_submit:
+        for line in to_submit:
             #structure file changes
-            Create_Entry, Wrapper_Id, Exercise_Id = check_exerciseid_in_structure(wb_s=wb_structure, cursor=cursor, row=row)
+            Create_Entry, Wrapper_Id, Exercise_Id = check_exerciseid_in_structure(wb_s=wb_structure, cursor=cursor, row=line)
             if Create_Entry:
                 wb_structure.save(filename=(str(structure_path))) 
             else:
                 pass
             #open an exercise.xlsx
 
-            exercise_path = Path(sheet.cell(row=row, column=folder_col).value.replace('..',str(path.parent)))
+            exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)))
             exercise_file = exercise_path/'exercise.xlsx'
             print(str(exercise_file))
             wb_exercise = load_workbook(str(exercise_file))
@@ -286,7 +317,117 @@ def main(folder,cursor, cnxn):
                     pass
 
             if case_vocab:
+                first_run = True
                 print(vocab)
+                max_info = []
+                for sheet_name in vocab:
+                    sheet = wb_exercise[sheet_name]
+                    max_info.append(sheet.max_row)
+                isequal = all_equal(max_info)
+                if isequal:
+                    max_row = max_info[0]
+                else:
+                    print('something wrong with number of rows, terminating')
+                    exit()
+                print(max_row)
+                data_row = 3
+                sheet_name = [s for s in vocab if 'Confusion' in s][0]
+                print(sheet_name)
+                sheet = wb_exercise[sheet_name]
+                names,columns,ranges = get_sheet_structure(sheet = sheet)
+                    
+                for row in range(data_row,max_row+1):
+                    #start with confusionbox    
+                    if first_run == True:
+                        first_run = False
+                        print(row)                
+                        
+                        
+                        entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
+                        
+                        Create_Entry = False
+                        Edit_Excel = False
+                        if entry[entry_columns.index('ExerciseId')]!= Exercise_Id:
+                            entry[entry_columns.index('ExerciseId')] = Exercise_Id
+                            Edit_Excel = True
+                        else:
+                            pass
+
+                        print(entry)
+                        if entry[entry_columns.index('Id')]:
+                            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[ConfusionBoxes] WHERE Id = '+ str(entry[entry_columns.index('Id')]) +' AND ExerciseId = '+str(entry[entry_columns.index('ExerciseId')])
+                            print(sqlcommand)
+                            cursor.execute(sqlcommand)
+                            list = cursor.fetchall()
+                            print(list)
+                            if not list:
+                                Create_Entry = True 
+                                Edit_Excel = True
+                            else:
+                                pass
+                        else:
+                            Create_Entry = True
+                            Edit_Excel = True
+
+                        if Create_Entry:
+                            cursor.execute('SELECT MAX(Id) AS maximum FROM ConfusionBoxes')
+                            Id = cursor.fetchall()[0][0]+1
+                            print(Id)
+                            entry[entry_columns.index('Id')] = Id
+                            sqlcommand = 'INSERT INTO [dbo].[ConfusionBoxes] VALUES([Id],[ExerciseId],[DialectId],[CorrectTranscriptionId],[Bin])'
+                            Id,ExerciseId,DialectId,CorrectTranscriptionId,Bin = entry
+                            for id in entry_columns:
+                                sqlcommand = sqlcommand.replace('['+id+']','?')
+                            print(sqlcommand)
+                            
+                            cursor.execute(sqlcommand,Id,ExerciseId,DialectId,CorrectTranscriptionId,Bin)
+                            cnxn.commit()
+                        else:
+                            print('db entry exists')
+
+                        if Edit_Excel:
+                            replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
+                            wb_exercise.save(str(exercise_file))    
+                        entry_confusionbox_out = entry
+                        
+                        
+                    else:
+                        print("here")
+                        entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
+                        if entry != entry_confusionbox_out:                          
+                            replace_entry(sheet=sheet,entry=entry_confusionbox_out,entry_range=entry_range)
+                            wb_exercise.save(str(exercise_file))
+                    
+                    
+                    
+                    
+                        
+                    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='Words', names=names,ranges=ranges,row=row,columns=columns)[0]
+                    print(entry)
+                    exit()
+
+
+
+                    #entry_TranscriptionConfusionBoxes = get_entry_by_name(sheet=sheet,table_name='TranscriptionConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)
+                    #print(entry_TranscriptionConfusionBoxes)
+
+                    #entry_Words = get_entry_by_name(sheet=sheet,table_name='Words', names=names,ranges=ranges,row=row,columns=columns)
+                    #print(entry_Words)
+
+                    #entry_Transcriptions = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row, columns=columns)
+                    #print(entry_Transcriptions[0][2])
+
+                    
+                    
+
+                    
+                    
+
+                
+                
+                
+                
+                
             elif case_mp:
                 print(mp)
             elif case_nw:
