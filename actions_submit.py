@@ -32,8 +32,6 @@ def check_exerciseid_in_structure(wb_s,cursor,row):
     #it checks wrapper and wrappereercise for id and wrapper_id and for exercise_id
     sheet = wb_s['Lessons']
     names,columns,ranges = get_sheet_structure(sheet = sheet)
-    
-    
     min_col, min_row,max_col,max_row=ranges[names.index('WrapperExercises')]
     data = []
     coord = []
@@ -147,10 +145,6 @@ def work_on_exercises_sheet(wb,cursor,cnxn, Wrapper_Id, Exercise_Id):
 
 
     sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Exercises] where Id = '+str(Exercise_Id)
-    #sqlcommand = 'INSERT INTO [dbo].[Exercises] ([Wrapper_Id],[Exercise_Id]) VALUES '
-    #list = sqlcommand.split()[3].split(',')
-    #values = sqlcommand.split()[3].replace('[Wrapper_Id]',str(Wrapper_Id)).replace('[Exercise_Id]',str(Exercise_Id))
-    #sqlcommand = sqlcommand + values
     cursor.execute(sqlcommand)
     list = cursor.fetchall()
     Create_Entry = False
@@ -182,9 +176,6 @@ def work_on_exercises_sheet(wb,cursor,cnxn, Wrapper_Id, Exercise_Id):
                 for cell in cells:
                     entry.append(cell.value)
             print("excel data: ",entry)
-         
-            
-           
 
             if entry[columns[index].index('ExerciseId')]!= Exercise_Id:
                 entry[columns[index].index('ExerciseId')] = Exercise_Id
@@ -219,20 +210,16 @@ def work_on_exercises_sheet(wb,cursor,cnxn, Wrapper_Id, Exercise_Id):
                 cursor.execute(sqlcommand,Id,WrapperId,ExerciseId,WordId,PronunciationId,Value,Key,Description,DialectId,Language_Id)
                 
                 cnxn.commit()
-            print(Edit_Excel)
-            
+
             if Edit_Excel:
                 for ind,ex in enumerate(entry):
                     data_row = 3
                     print(ind,ex)
                     sheet.cell(row=data_row, column = min_col+ind).value = ex
-                
             else:
                 pass
-            
-
-                
-
+        else:
+            print("No properties?")
     return Edit_Excel
 
 
@@ -273,11 +260,44 @@ def main(folder,cursor, cnxn):
             print(str(exercise_file))
             wb = load_workbook(str(exercise_file))
             Edit_Excel = work_on_exercises_sheet(wb=wb,cursor=cursor, cnxn=cnxn, Wrapper_Id=Wrapper_Id,Exercise_Id=Exercise_Id)
-
             if Edit_Excel:
                  wb.save(str(exercise_file))
             else:
                 pass
+            
+            case_vocab = False
+            vocab = []
+            case_mp = False
+            mp = []
+            case_nw = False
+            nw = []
+            for sheetname in wb.sheetnames:
+                if 'Vocab' in  sheetname:
+                    case_vocab = True
+                    vocab.append(sheetname)
+                elif 'MP' in sheetname:
+                    #work on Vocab-Confusion Box
+                    case_mp = True
+                    mp.append(sheetname)
+                elif 'Nonword' in sheetname:
+                    case_nw = True
+                    nw.append(sheetname)
+                else:
+                    pass
+
+            if case_vocab:
+                print(vocab)
+            elif case_mp:
+                print(mp)
+            elif case_nw:
+                print(nw)
+            else:
+                pass
+
+    else:
+        print("No exercise file here. quitting")
+        exit()                
+
 
 
 
