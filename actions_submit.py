@@ -1,5 +1,6 @@
 
 from ast import Index
+from msilib.schema import CreateFolder
 from natsort import natsorted
 from itertools import groupby
 from pathlib import Path
@@ -256,6 +257,91 @@ def replace_entry(sheet,entry, entry_range):
 
 
 
+def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
+    names,columns,ranges = get_sheet_structure(sheet = sheet)
+    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
+    print(entry)
+    Edit_Excel = False
+    if input_col == False or input_to_local_col == False:
+        pass
+    else:
+        if entry[entry_columns.index(input_to_local_col)]!= input_col:
+            entry[entry_columns.index(input_to_local_col)] = input_col
+            Edit_Excel = True
+        else:
+            pass
+
+    
+    if entry[entry_columns.index(modify_col)]:
+
+        sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
+       
+        
+        count = 0
+        for id in entry_columns:
+            cell_value = entry[entry_columns.index(id)]
+            if isinstance(cell_value, str):
+                string = '\''+str(cell_value)+'\''
+            else:
+                string = str(cell_value)
+            if count == 0:
+                sqlcommand = sqlcommand + ' WHERE '+ id + ' = ' + string
+            else: 
+                sqlcommand = sqlcommand + ' AND '+ id + ' = ' + string
+            count = count + 1
+        print(sqlcommand)
+        
+        cursor.execute(sqlcommand)
+        list = cursor.fetchall()
+        print(list)
+        
+        if not list:
+            Create_Entry = True 
+            Edit_Excel = True
+        else:
+            pass
+    else:
+        Create_Entry = True
+        Edit_Excel = True
+    print(Create_Entry, 'here', table_name)
+    
+    if Create_Entry:
+        sqlcommand = 'SELECT MAX('+modify_col+') AS maximum FROM '+ table_name
+
+        cursor.execute(sqlcommand)
+        modify = cursor.fetchall()[0][0]+1
+        print(modify)
+        entry[entry_columns.index(modify_col)] = modify
+        print(entry)
+
+        sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
+        count = 0
+        for id in entry_columns:
+            if count == 0:
+                sqlcommand_insert = sqlcommand_insert+'?'
+            else:
+                sqlcommand_insert = sqlcommand_insert+',?'
+            count = count + 1
+        sqlcommand_insert = sqlcommand_insert+')'
+        print(sqlcommand_insert)
+          
+        cursor.execute(sqlcommand_insert,entry)
+        
+        cnxn.commit()
+        
+    else:
+        print('db entry exists')
+    
+    if Edit_Excel:
+        replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
+        wb.save(str(exercise_file))    
+    else:
+        print('No edits to Excel')
+   
+    return entry
+
+
+
 def main(folder,cursor, cnxn):
     path = Path(folder)
     print(path.parent)
@@ -340,65 +426,32 @@ def main(folder,cursor, cnxn):
                     #start with confusionbox    
                     if first_run == True:
                         first_run = False
-                        print(row)                
+                        print(row) 
                         
+                        entry_changed = work_on_entry(wb=wb_exercise,
+                                                input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
+                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet,table_name='ConfusionBoxes',row=row) 
+                        print(entry_changed)
                         
-                        entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
-                        
-                        Create_Entry = False
-                        Edit_Excel = False
-                        if entry[entry_columns.index('ExerciseId')]!= Exercise_Id:
-                            entry[entry_columns.index('ExerciseId')] = Exercise_Id
-                            Edit_Excel = True
-                        else:
-                            pass
-
-                        print(entry)
-                        if entry[entry_columns.index('Id')]:
-                            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[ConfusionBoxes] WHERE Id = '+ str(entry[entry_columns.index('Id')]) +' AND ExerciseId = '+str(entry[entry_columns.index('ExerciseId')])
-                            print(sqlcommand)
-                            cursor.execute(sqlcommand)
-                            list = cursor.fetchall()
-                            print(list)
-                            if not list:
-                                Create_Entry = True 
-                                Edit_Excel = True
-                            else:
-                                pass
-                        else:
-                            Create_Entry = True
-                            Edit_Excel = True
-
-                        if Create_Entry:
-                            cursor.execute('SELECT MAX(Id) AS maximum FROM ConfusionBoxes')
-                            Id = cursor.fetchall()[0][0]+1
-                            print(Id)
-                            entry[entry_columns.index('Id')] = Id
-                            sqlcommand = 'INSERT INTO [dbo].[ConfusionBoxes] VALUES([Id],[ExerciseId],[DialectId],[CorrectTranscriptionId],[Bin])'
-                            Id,ExerciseId,DialectId,CorrectTranscriptionId,Bin = entry
-                            for id in entry_columns:
-                                sqlcommand = sqlcommand.replace('['+id+']','?')
-                            print(sqlcommand)
-                            
-                            cursor.execute(sqlcommand,Id,ExerciseId,DialectId,CorrectTranscriptionId,Bin)
-                            cnxn.commit()
-                        else:
-                            print('db entry exists')
-
-                        if Edit_Excel:
-                            replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
-                            wb_exercise.save(str(exercise_file))    
-                        entry_confusionbox_out = entry
-                        
-                        
+                                         
                     else:
                         print("here")
                         entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
-                        if entry != entry_confusionbox_out:                          
-                            replace_entry(sheet=sheet,entry=entry_confusionbox_out,entry_range=entry_range)
+                        if entry != entry_changed:                          
+                            replace_entry(sheet=sheet,entry=entry_changed,entry_range=entry_range)
                             wb_exercise.save(str(exercise_file))
-                    
-                        
+
+    
+
+
+
+                    entry_word = work_on_entry(table_name='Words', wb=wb_exercise,
+                                                input_col=False, input_to_local_col=False, modify_col='Id',
+                                                Create_Entry=True,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet,row=row) 
+                    print(entry_word)
+                    exit()
                     entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='Words', names=names,ranges=ranges,row=row,columns=columns)[0]
                     entry_words = entry
                     columns_words = entry_columns
