@@ -398,13 +398,73 @@ def main(folder,cursor, cnxn):
                             replace_entry(sheet=sheet,entry=entry_confusionbox_out,entry_range=entry_range)
                             wb_exercise.save(str(exercise_file))
                     
-                    
-                    
-                    
                         
                     entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='Words', names=names,ranges=ranges,row=row,columns=columns)[0]
+                    entry_words = entry
+                    columns_words = entry_columns
+                    Edit_Excel = False
+                    print(entry, entry[entry_columns.index('Id')] )
+                    replace_words = False
+                    Create_Entry = False
+                    if replace_words:
+                        Create_Entry = True
+                    else:
+                        if not entry[entry_columns.index('Id')]:
+                            Create_Entry = True
+                        else:
+                            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Words] WHERE Id = '+str(entry[entry_columns.index('Id')])+ ' AND Text = \''+str(entry[entry_columns.index('Text')])+'\''
+                            print(sqlcommand)
+                            cursor.execute(sqlcommand)
+                            list = cursor.fetchall()
+                            if not list:
+                                Create_Entry = True
+                            else:
+                                print('db entry exists, words')
+                    
+                    if Create_Entry:
+                        cursor.execute('SELECT MAX(Id) AS maximum FROM Words')
+                        Id = cursor.fetchall()[0][0]+1
+                        Edit_Excel = True
+                        print(Id)
+                        entry[entry_columns.index('Id')] = Id
+                        print(entry)
+                        sqlcommand = 'INSERT INTO [dbo].[Words] VALUES([Id],[Text],[LanguageId])'
+                        Id,Text,LanguageId = entry
+                        for id in entry_columns:
+                            sqlcommand = sqlcommand.replace('['+id+']','?')
+                        print(sqlcommand)
+                        entry_words = entry
+                        
+                        cursor.execute(sqlcommand,Id,Text,LanguageId)
+                        cnxn.commit()
+                    if Edit_Excel:
+                            replace_entry(sheet=sheet,entry=entry_words,entry_range=entry_range)
+                            wb_exercise.save(str(exercise_file)) 
+
+                    #transcriptions
+                    Create_Entry = False
+                    print(entry_words)
+                    
+                    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row,columns=columns)[0]                    
                     print(entry)
-                    exit()
+                    
+                    print(entry[entry_columns.index('WordId')],entry_words[columns_words.index('Id')])
+                    
+                    if entry[entry_columns.index('WordId')]!= entry_words[columns_words.index('Id')]:
+                        entry[entry_columns.index('WordId')]= entry_words[columns_words.index('Id')]
+                        Create_Entry = True
+                    else:
+                        sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Transcriptions] WHERE Id = '+str(entry[entry_columns.index('Id')])+ ' AND WordId = \''+str(entry[entry_columns.index('WordId')])+'\''
+                        print(sqlcommand)
+                        cursor.execute(sqlcommand)
+                        list = cursor.fetchall()
+                        if not list:
+                            Create_Entry = True
+                        else:
+                            print('db entry exists, words')
+                    print(entry)
+                    print(Create_Entry)
+                    
 
 
 
