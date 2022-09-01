@@ -510,7 +510,7 @@ def main(folder,cursor, cnxn):
 
                 #sheet_wp = wb_exercise[sheet_name]
                 #names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
-                Force_Rewrite = True
+                Force_Rewrite = False
                 for row in range(data_row,max_row+1):
                     #start with confusionbox    
                     if first_run == True:
@@ -582,16 +582,7 @@ def main(folder,cursor, cnxn):
                                                     input_col=entry_trans[entry_trans_columns.index('Id')], input_to_local_col='Transcription_Id', 
                                                     modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                                     sheet=sheet_st,row=row,table_name_number=pron_num) 
-                            
-                           
-
-                        
-                   
-                        
-                    
-                    
-                    
-                    #the next sheet
+                  #the next sheet
                     entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[0]
                     if entry != entry_word:  
                         print(entry, entry_word)                        
@@ -606,24 +597,6 @@ def main(folder,cursor, cnxn):
                                                 input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', modify_col='Id',
                                                 Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                                 sheet=sheet_wp,row=row,table_name_number=0)
-                        print(entry_prop)
-                    
-                    c_trans = Counter(names)
-                    print(c_trans['Transcriptions'])
-                    for i in range(c_trans['Transcriptions']):
-                        print(i)
-                        sheet_name = [s for s in vocab if 'Speaker_Trans_'+str(i) in s][0]
-                        sheet_st = wb_exercise[sheet_name]
-                        names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
-                        c_pron = Counter(names_st)
-                        for pron_num in range(c_pron['Pronunciations']):
-                            print(pron_num)
-
-                    
-                        
-
-                    
-
 
             elif case_mp:
                 print(mp)
