@@ -285,12 +285,9 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
             else: 
                 sqlcommand = sqlcommand + ' AND '+ id + ' = ' + string
             count = count + 1
-        print(sqlcommand)
-        
+
         cursor.execute(sqlcommand)
         list = cursor.fetchall()
-        print(list)
-        
         if not list:
             Create_Entry = True 
             Edit_Excel = True
@@ -299,18 +296,14 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
     else:
         Create_Entry = True
         Edit_Excel = True
-    print(Create_Entry, 'here', table_name)
-    
+
     if Create_Entry:
         Edit_Excel = True
         sqlcommand = 'SELECT MAX('+modify_col+') AS maximum FROM '+ table_name
 
         cursor.execute(sqlcommand)
         modify = cursor.fetchall()[0][0]+1
-        print(modify)
         entry[entry_columns.index(modify_col)] = modify
-        print(entry)
-
         sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
         count = 0
         for id in entry_columns:
@@ -320,12 +313,8 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
                 sqlcommand_insert = sqlcommand_insert+',?'
             count = count + 1
         sqlcommand_insert = sqlcommand_insert+')'
-        print(sqlcommand_insert)
-          
         cursor.execute(sqlcommand_insert,entry)
-        
         cnxn.commit()
-        
     else:
         print('db entry exists')
     
@@ -354,11 +343,7 @@ def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, 
             pass
 
     
-    #if entry[entry_columns.index(modify_col)]:
-
     sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
-       
-        
     count = 0
     for id in entry_columns:
         cell_value = entry[entry_columns.index(id)]
@@ -371,12 +356,8 @@ def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, 
         else: 
             sqlcommand = sqlcommand + ' AND '+ id + ' = ' + string
         count = count + 1
-    print(sqlcommand)
-       
     cursor.execute(sqlcommand)
     list = cursor.fetchall()
-    print(list)
-        
     if not list:
         Create_Entry = True 
         Edit_Excel = True
@@ -394,10 +375,7 @@ def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, 
                 sqlcommand_insert = sqlcommand_insert+',?'
             count = count + 1
         sqlcommand_insert = sqlcommand_insert+')'
-        print(sqlcommand_insert)
-              
         cursor.execute(sqlcommand_insert,entry)
-        
         cnxn.commit()
         
     else:
@@ -417,7 +395,6 @@ def main(folder,cursor, cnxn):
     path = Path(folder)
     print(path.parent)
     structure_path  = Path(folder+'\\lessons_structure.xlsx')
-    firstrun = True
     if structure_path.exists():
         #check actions column for the command "submit"
         wb_structure = load_workbook(str(structure_path))
@@ -486,7 +463,7 @@ def main(folder,cursor, cnxn):
                 else:
                     print('something wrong with number of rows, terminating')
                     exit()
-                print(max_row)
+
                 data_row = 3
                 sheet_name = [s for s in vocab if 'Confusion' in s][0]
                 print(sheet_name)
@@ -497,18 +474,15 @@ def main(folder,cursor, cnxn):
                     #start with confusionbox    
                     if first_run == True:
                         first_run = False
-                        print(row) 
-                        
                         entry_cb,entry_cb_columns  = work_on_entry(wb=wb_exercise,table_name='ConfusionBoxes',
                                                 input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
                                                 Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                                 sheet=sheet,row=row, table_name_number=0) 
-                        print(entry_cb, entry_cb_columns)
+
                         
                         
                                          
                     else:
-                        print("here")
                         entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
                         if entry != entry_cb:                          
                             replace_entry(sheet=sheet,entry=entry_cb,entry_range=entry_range)
@@ -547,8 +521,7 @@ def main(folder,cursor, cnxn):
                                                 input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
                                                 Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                                 sheet=sheet,row=row)
-                    #entry_cb_trans, entry_cb_trans_columns = 
-                    print(entry_cb_trans, entry_cb_trans_columns)
+
 
             elif case_mp:
                 print(mp)
