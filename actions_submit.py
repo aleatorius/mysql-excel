@@ -1,6 +1,5 @@
 
-from ast import Index
-from msilib.schema import CreateFolder
+from collections import Counter
 from natsort import natsorted
 from itertools import groupby
 from pathlib import Path
@@ -260,18 +259,120 @@ def replace_entry(sheet,entry, entry_range):
 def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row, table_name_number):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[table_name_number]
-    Edit_Excel = False
-    if input_col == False or input_to_local_col == False:
-        pass
-    else:
-        if entry[entry_columns.index(input_to_local_col)]!= input_col:
-            entry[entry_columns.index(input_to_local_col)] = input_col
-            Edit_Excel = True
+    isnone = False
+    if all_equal(entry):
+        if entry[0] == None:
+            isnone = True
         else:
             pass
+    else:
+        pass
+    print(isnone)   
+    if isnone == False:
+        
+        Edit_Excel = False
+        if input_col == False or input_to_local_col == False:
+            pass
+        else:
+            if entry[entry_columns.index(input_to_local_col)]!= input_col:
+                entry[entry_columns.index(input_to_local_col)] = input_col
+                Edit_Excel = True
+            else:
+                pass
 
-    
-    if entry[entry_columns.index(modify_col)]:
+        
+        if entry[entry_columns.index(modify_col)]:
+            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
+            count = 0
+            for id in entry_columns:
+                cell_value = entry[entry_columns.index(id)]
+                if cell_value == True:
+                    cell_value = 1
+                elif cell_value == False:
+                    cell_value = 0
+                else:
+                    pass
+                if cell_value != None:
+                    if isinstance(cell_value, str):
+                        string = '\''+str(cell_value)+'\''
+                    else:
+                        string = str(cell_value)
+                    if count == 0:
+                        sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
+                    else: 
+                        sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
+                else:
+                    pass
+                count = count + 1
+            print(sqlcommand)
+            cursor.execute(sqlcommand)
+            list = cursor.fetchall()
+            if not list:
+                Create_Entry = True 
+                Edit_Excel = True
+            else:
+                pass
+        else:
+            Create_Entry = True
+            Edit_Excel = True
+
+        if Create_Entry:
+            Edit_Excel = True
+            sqlcommand = 'SELECT MAX('+modify_col+') AS maximum FROM '+ table_name
+
+            cursor.execute(sqlcommand)
+            modify = cursor.fetchall()[0][0]+1
+            entry[entry_columns.index(modify_col)] = modify
+            sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
+            count = 0
+            for id in entry_columns:
+                if count == 0:
+                    sqlcommand_insert = sqlcommand_insert+'?'
+                else:
+                    sqlcommand_insert = sqlcommand_insert+',?'
+                count = count + 1
+            sqlcommand_insert = sqlcommand_insert+')'
+            cursor.execute(sqlcommand_insert,entry)
+            cnxn.commit()
+        else:
+            print('db entry exists')
+        
+        if Edit_Excel:
+            replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
+            wb.save(str(exercise_file))    
+        else:
+            print('No edits to Excel')
+    else:
+        pass
+    return entry, entry_columns
+
+
+
+
+def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
+    names,columns,ranges = get_sheet_structure(sheet = sheet)
+    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
+    print(entry,'here')
+    isnone = False
+    if all_equal(entry):
+        if entry[0] == None:
+            isnone = True
+        else:
+            pass
+    else:
+        pass
+    print(isnone)   
+    if isnone == False:
+        Edit_Excel = False
+
+        for index,input in enumerate(input_to_local_cols):
+            if entry[entry_columns.index(input)] != input_cols[index]:
+                entry[entry_columns.index(input)] = input_cols[index]
+                Edit_Excel = True
+            else:
+                pass
+
+        
         sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
         count = 0
         for id in entry_columns:
@@ -285,7 +386,6 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
             else: 
                 sqlcommand = sqlcommand + ' AND '+ id + ' = ' + string
             count = count + 1
-
         cursor.execute(sqlcommand)
         list = cursor.fetchall()
         if not list:
@@ -293,100 +393,31 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
             Edit_Excel = True
         else:
             pass
-    else:
-        Create_Entry = True
-        Edit_Excel = True
-
-    if Create_Entry:
-        Edit_Excel = True
-        sqlcommand = 'SELECT MAX('+modify_col+') AS maximum FROM '+ table_name
-
-        cursor.execute(sqlcommand)
-        modify = cursor.fetchall()[0][0]+1
-        entry[entry_columns.index(modify_col)] = modify
-        sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
-        count = 0
-        for id in entry_columns:
-            if count == 0:
-                sqlcommand_insert = sqlcommand_insert+'?'
-            else:
-                sqlcommand_insert = sqlcommand_insert+',?'
-            count = count + 1
-        sqlcommand_insert = sqlcommand_insert+')'
-        cursor.execute(sqlcommand_insert,entry)
-        cnxn.commit()
-    else:
-        print('db entry exists')
-    
-    if Edit_Excel:
-        replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
-        wb.save(str(exercise_file))    
-    else:
-        print('No edits to Excel')
-   
-    return entry, entry_columns
-
-
-
-
-def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
-    names,columns,ranges = get_sheet_structure(sheet = sheet)
-    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
-    
-    Edit_Excel = False
-
-    for index,input in enumerate(input_to_local_cols):
-        if entry[entry_columns.index(input)] != input_cols[index]:
-            entry[entry_columns.index(input)] = input_cols[index]
-            Edit_Excel = True
+        
+        if Create_Entry:
+            
+            sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
+            count = 0
+            for id in entry_columns:
+                if count == 0:
+                    sqlcommand_insert = sqlcommand_insert+'?'
+                else:
+                    sqlcommand_insert = sqlcommand_insert+',?'
+                count = count + 1
+            sqlcommand_insert = sqlcommand_insert+')'
+            cursor.execute(sqlcommand_insert,entry)
+            cnxn.commit()
+            
         else:
-            pass
-
-    
-    sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
-    count = 0
-    for id in entry_columns:
-        cell_value = entry[entry_columns.index(id)]
-        if isinstance(cell_value, str):
-            string = '\''+str(cell_value)+'\''
+            print('db entry exists')
+        
+        if Edit_Excel:
+            replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
+            wb.save(str(exercise_file))    
         else:
-            string = str(cell_value)
-        if count == 0:
-            sqlcommand = sqlcommand + ' WHERE '+ id + ' = ' + string
-        else: 
-            sqlcommand = sqlcommand + ' AND '+ id + ' = ' + string
-        count = count + 1
-    cursor.execute(sqlcommand)
-    list = cursor.fetchall()
-    if not list:
-        Create_Entry = True 
-        Edit_Excel = True
+            print('No edits to Excel')
     else:
         pass
-    
-    if Create_Entry:
-        
-        sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
-        count = 0
-        for id in entry_columns:
-            if count == 0:
-                sqlcommand_insert = sqlcommand_insert+'?'
-            else:
-                sqlcommand_insert = sqlcommand_insert+',?'
-            count = count + 1
-        sqlcommand_insert = sqlcommand_insert+')'
-        cursor.execute(sqlcommand_insert,entry)
-        cnxn.commit()
-        
-    else:
-        print('db entry exists')
-    
-    if Edit_Excel:
-        replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
-        wb.save(str(exercise_file))    
-    else:
-        print('No edits to Excel')
-   
     return entry, entry_columns
 
 
@@ -469,14 +500,24 @@ def main(folder,cursor, cnxn):
                 print(sheet_name)
                 sheet = wb_exercise[sheet_name]
                 names,columns,ranges = get_sheet_structure(sheet = sheet)
-                    
+
+                sheet_name = [s for s in vocab if 'Words Properties' in s][0]
+                print(sheet_name)
+                sheet_wp = wb_exercise[sheet_name]
+                names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
+
+                
+
+                #sheet_wp = wb_exercise[sheet_name]
+                #names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
+                Force_Rewrite = False
                 for row in range(data_row,max_row+1):
                     #start with confusionbox    
                     if first_run == True:
                         first_run = False
                         entry_cb,entry_cb_columns  = work_on_entry(wb=wb_exercise,table_name='ConfusionBoxes',
                                                 input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
-                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                                 sheet=sheet,row=row, table_name_number=0) 
 
                         
@@ -491,36 +532,97 @@ def main(folder,cursor, cnxn):
                     #words            
                     entry_word, entry_word_columns = work_on_entry(table_name='Words', wb=wb_exercise,
                                                 input_col=False, input_to_local_col=False, modify_col='Id',
-                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                                 sheet=sheet,row=row,table_name_number=0) 
                     
                     
                     
                     #transcriptions
 
-                    entries = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row,columns=columns)
+                    #entries = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row,columns=columns)
                     
-
-                    entry_trans_0, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
-                                                input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
-                                                modify_col='Id',Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet,row=row,table_name_number=0) 
-                    
-                    if len(entries) == 2:
-                        entry_trans_1, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
+                    c = Counter(names)
+                    for num in range(c['Transcriptions']):
+                        entry_trans, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
                                                     input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
-                                                    modify_col='Id',Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                    sheet=sheet,row=row,table_name_number=1)
-                    else:
-                        print('too many transcriptions, please modify code now %-)')
-                        exit()
+                                                    modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                    sheet=sheet,row=row,table_name_number=num) 
+                        if num == 0:
+                            entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                                                input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
+                                                input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
+                                                Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet,row=row)
+                        else:
+                            pass
+                        sheet_name = [s for s in vocab if 'Speaker_Trans_'+str(num) in s][0]
+                        sheet_st = wb_exercise[sheet_name]
+                        names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
+
+                        entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_st,table_name='Words', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                        print(entry, entry_word)
+                        
+                        if entry != entry_word:                          
+                            replace_entry(sheet=sheet_st,entry=entry_word,entry_range=entry_range)
+                            wb_exercise.save(str(exercise_file))
+
+                        entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_st,table_name='Transcriptions', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                        print(entry, entry_trans)
+                        
+                        
+                        if entry != entry_trans:                          
+                            replace_entry(sheet=sheet_st,entry=entry_trans,entry_range=entry_range)
+                            wb_exercise.save(str(exercise_file))
+                        
+
+                        c_pron = Counter(names_st)
+                        for pron_num in range(c_pron['Pronunciations']):
+                            print(pron_num)
+                            entry_pron, entry_pron_columns = work_on_entry(table_name='Pronunciations', wb=wb_exercise,
+                                                    input_col=entry_trans[entry_trans_columns.index('Id')], input_to_local_col='Transcription_Id', 
+                                                    modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                    sheet=sheet_st,row=row,table_name_number=pron_num) 
+                            
+                           
+
+                        
+                   
                         
                     
-                    entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
-                                                input_cols=[entry_trans_0[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
-                                                input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
-                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet,row=row)
+                    
+                    
+                    #the next sheet
+                    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[0]
+                    if entry != entry_word:  
+                        print(entry, entry_word)                        
+                        replace_entry(sheet=sheet_wp,entry=entry_word,entry_range=entry_range)
+                        wb_exercise.save(str(exercise_file))
+                    
+                    c = Counter(names_wp)
+                    print(c['Properties'])
+                    for i in range(c['Properties']):
+                        print(i)
+                        entry_prop, entry_prop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
+                                                input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', modify_col='Id',
+                                                Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet_wp,row=row,table_name_number=0)
+                        print(entry_prop)
+                    
+                    c_trans = Counter(names)
+                    print(c_trans['Transcriptions'])
+                    for i in range(c_trans['Transcriptions']):
+                        print(i)
+                        sheet_name = [s for s in vocab if 'Speaker_Trans_'+str(i) in s][0]
+                        sheet_st = wb_exercise[sheet_name]
+                        names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
+                        c_pron = Counter(names_st)
+                        for pron_num in range(c_pron['Pronunciations']):
+                            print(pron_num)
+
+                    exit()
+                        
+
+                    
 
 
             elif case_mp:
