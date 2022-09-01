@@ -510,7 +510,7 @@ def main(folder,cursor, cnxn):
 
                 #sheet_wp = wb_exercise[sheet_name]
                 #names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
-                Force_Rewrite = False
+                Force_Rewrite = True
                 for row in range(data_row,max_row+1):
                     #start with confusionbox    
                     if first_run == True:
@@ -619,7 +619,7 @@ def main(folder,cursor, cnxn):
                         for pron_num in range(c_pron['Pronunciations']):
                             print(pron_num)
 
-                    exit()
+                    
                         
 
                     
