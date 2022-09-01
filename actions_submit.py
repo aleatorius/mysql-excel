@@ -257,10 +257,9 @@ def replace_entry(sheet,entry, entry_range):
 
 
 
-def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
+def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row, table_name_number):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
-    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
-    print(entry)
+    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[table_name_number]
     Edit_Excel = False
     if input_col == False or input_to_local_col == False:
         pass
@@ -273,10 +272,7 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
 
     
     if entry[entry_columns.index(modify_col)]:
-
         sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
-       
-        
         count = 0
         for id in entry_columns:
             cell_value = entry[entry_columns.index(id)]
@@ -306,6 +302,7 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
     print(Create_Entry, 'here', table_name)
     
     if Create_Entry:
+        Edit_Excel = True
         sqlcommand = 'SELECT MAX('+modify_col+') AS maximum FROM '+ table_name
 
         cursor.execute(sqlcommand)
@@ -338,7 +335,81 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
     else:
         print('No edits to Excel')
    
-    return entry
+    return entry, entry_columns
+
+
+
+
+def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
+    names,columns,ranges = get_sheet_structure(sheet = sheet)
+    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
+    
+    Edit_Excel = False
+
+    for index,input in enumerate(input_to_local_cols):
+        if entry[entry_columns.index(input)] != input_cols[index]:
+            entry[entry_columns.index(input)] = input_cols[index]
+            Edit_Excel = True
+        else:
+            pass
+
+    
+    #if entry[entry_columns.index(modify_col)]:
+
+    sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
+       
+        
+    count = 0
+    for id in entry_columns:
+        cell_value = entry[entry_columns.index(id)]
+        if isinstance(cell_value, str):
+            string = '\''+str(cell_value)+'\''
+        else:
+            string = str(cell_value)
+        if count == 0:
+            sqlcommand = sqlcommand + ' WHERE '+ id + ' = ' + string
+        else: 
+            sqlcommand = sqlcommand + ' AND '+ id + ' = ' + string
+        count = count + 1
+    print(sqlcommand)
+       
+    cursor.execute(sqlcommand)
+    list = cursor.fetchall()
+    print(list)
+        
+    if not list:
+        Create_Entry = True 
+        Edit_Excel = True
+    else:
+        pass
+    
+    if Create_Entry:
+        
+        sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
+        count = 0
+        for id in entry_columns:
+            if count == 0:
+                sqlcommand_insert = sqlcommand_insert+'?'
+            else:
+                sqlcommand_insert = sqlcommand_insert+',?'
+            count = count + 1
+        sqlcommand_insert = sqlcommand_insert+')'
+        print(sqlcommand_insert)
+              
+        cursor.execute(sqlcommand_insert,entry)
+        
+        cnxn.commit()
+        
+    else:
+        print('db entry exists')
+    
+    if Edit_Excel:
+        replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
+        wb.save(str(exercise_file))    
+    else:
+        print('No edits to Excel')
+   
+    return entry, entry_columns
 
 
 
@@ -428,119 +499,57 @@ def main(folder,cursor, cnxn):
                         first_run = False
                         print(row) 
                         
-                        entry_changed = work_on_entry(wb=wb_exercise,
+                        entry_cb,entry_cb_columns  = work_on_entry(wb=wb_exercise,table_name='ConfusionBoxes',
                                                 input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
                                                 Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet,table_name='ConfusionBoxes',row=row) 
-                        print(entry_changed)
+                                                sheet=sheet,row=row, table_name_number=0) 
+                        print(entry_cb, entry_cb_columns)
+                        
                         
                                          
                     else:
                         print("here")
                         entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
-                        if entry != entry_changed:                          
-                            replace_entry(sheet=sheet,entry=entry_changed,entry_range=entry_range)
+                        if entry != entry_cb:                          
+                            replace_entry(sheet=sheet,entry=entry_cb,entry_range=entry_range)
                             wb_exercise.save(str(exercise_file))
 
-    
-
-
-
-                    entry_word = work_on_entry(table_name='Words', wb=wb_exercise,
+                    #words            
+                    entry_word, entry_word_columns = work_on_entry(table_name='Words', wb=wb_exercise,
                                                 input_col=False, input_to_local_col=False, modify_col='Id',
-                                                Create_Entry=True,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet,row=row) 
-                    print(entry_word)
-                    exit()
-                    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='Words', names=names,ranges=ranges,row=row,columns=columns)[0]
-                    entry_words = entry
-                    columns_words = entry_columns
-                    Edit_Excel = False
-                    print(entry, entry[entry_columns.index('Id')] )
-                    replace_words = False
-                    Create_Entry = False
-                    if replace_words:
-                        Create_Entry = True
-                    else:
-                        if not entry[entry_columns.index('Id')]:
-                            Create_Entry = True
-                        else:
-                            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Words] WHERE Id = '+str(entry[entry_columns.index('Id')])+ ' AND Text = \''+str(entry[entry_columns.index('Text')])+'\''
-                            print(sqlcommand)
-                            cursor.execute(sqlcommand)
-                            list = cursor.fetchall()
-                            if not list:
-                                Create_Entry = True
-                            else:
-                                print('db entry exists, words')
+                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet,row=row,table_name_number=0) 
                     
-                    if Create_Entry:
-                        cursor.execute('SELECT MAX(Id) AS maximum FROM Words')
-                        Id = cursor.fetchall()[0][0]+1
-                        Edit_Excel = True
-                        print(Id)
-                        entry[entry_columns.index('Id')] = Id
-                        print(entry)
-                        sqlcommand = 'INSERT INTO [dbo].[Words] VALUES([Id],[Text],[LanguageId])'
-                        Id,Text,LanguageId = entry
-                        for id in entry_columns:
-                            sqlcommand = sqlcommand.replace('['+id+']','?')
-                        print(sqlcommand)
-                        entry_words = entry
-                        
-                        cursor.execute(sqlcommand,Id,Text,LanguageId)
-                        cnxn.commit()
-                    if Edit_Excel:
-                            replace_entry(sheet=sheet,entry=entry_words,entry_range=entry_range)
-                            wb_exercise.save(str(exercise_file)) 
-
+                    
+                    
                     #transcriptions
-                    Create_Entry = False
-                    print(entry_words)
+
+                    entries = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row,columns=columns)
                     
-                    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row,columns=columns)[0]                    
-                    print(entry)
+
+                    entry_trans_0, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
+                                                input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
+                                                modify_col='Id',Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet,row=row,table_name_number=0) 
                     
-                    print(entry[entry_columns.index('WordId')],entry_words[columns_words.index('Id')])
-                    
-                    if entry[entry_columns.index('WordId')]!= entry_words[columns_words.index('Id')]:
-                        entry[entry_columns.index('WordId')]= entry_words[columns_words.index('Id')]
-                        Create_Entry = True
+                    if len(entries) == 2:
+                        entry_trans_1, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
+                                                    input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
+                                                    modify_col='Id',Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                    sheet=sheet,row=row,table_name_number=1)
                     else:
-                        sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Transcriptions] WHERE Id = '+str(entry[entry_columns.index('Id')])+ ' AND WordId = \''+str(entry[entry_columns.index('WordId')])+'\''
-                        print(sqlcommand)
-                        cursor.execute(sqlcommand)
-                        list = cursor.fetchall()
-                        if not list:
-                            Create_Entry = True
-                        else:
-                            print('db entry exists, words')
-                    print(entry)
-                    print(Create_Entry)
+                        print('too many transcriptions, please modify code now %-)')
+                        exit()
+                        
                     
+                    entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                                                input_cols=[entry_trans_0[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
+                                                input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
+                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet,row=row)
+                    #entry_cb_trans, entry_cb_trans_columns = 
+                    print(entry_cb_trans, entry_cb_trans_columns)
 
-
-
-                    #entry_TranscriptionConfusionBoxes = get_entry_by_name(sheet=sheet,table_name='TranscriptionConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)
-                    #print(entry_TranscriptionConfusionBoxes)
-
-                    #entry_Words = get_entry_by_name(sheet=sheet,table_name='Words', names=names,ranges=ranges,row=row,columns=columns)
-                    #print(entry_Words)
-
-                    #entry_Transcriptions = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row, columns=columns)
-                    #print(entry_Transcriptions[0][2])
-
-                    
-                    
-
-                    
-                    
-
-                
-                
-                
-                
-                
             elif case_mp:
                 print(mp)
             elif case_nw:
