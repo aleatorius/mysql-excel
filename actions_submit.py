@@ -1,4 +1,5 @@
 
+from calendar import c
 from collections import Counter
 from natsort import natsorted
 from itertools import groupby
@@ -288,6 +289,202 @@ def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, 
     return entry, entry_columns
 
 
+def work_with_line_in_structure_lessons(line,wb_structure,cursor, cnxn, structure_path, sheet, path_root, Force_Rewrite):
+    path=path_root
+    folder_col = get_column(sheet=sheet, row=1, name='Folders')
+    #structure file changes
+    Create_Entry, [Wrapper_Id, Exercise_Id] = check_exerciseid_in_structure(wb_s=wb_structure, cursor=cursor, row=line)
+    print([Wrapper_Id, Exercise_Id] )
+    entry_wrex= [Wrapper_Id, Exercise_Id]
+    if Create_Entry:
+        wb_structure.save(filename=(str(structure_path))) 
+        cnxn.commit()
+    else:
+        pass
+    #open an exercise.xlsx
+
+    
+    
+    exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)))
+    exercise_file = exercise_path/'exercise.xlsx'
+    print(str(exercise_file))
+    wb_exercise = load_workbook(str(exercise_file))
+    data_row = 3
+    sheet_ex = wb_exercise['Exercise']
+    names_ex,columns_ex,ranges_ex = get_sheet_structure(sheet = sheet_ex)
+    
+    entry_ex,entry_ex_range,entry_ex_columns = get_entry_by_name(sheet=sheet_ex,table_name='WrapperExercises', names=names_ex,ranges=ranges_ex,row=data_row,columns=columns_ex)[0]
+    
+    
+    if entry_ex != entry_wrex:                          
+        replace_entry(sheet=sheet_ex,entry=entry_wrex,entry_range=entry_ex_range)
+        wb_exercise.save(str(exercise_file))
+
+
+    entry_ex, entry_ex_columns = work_on_entry_with_no_id(table_name='Exercises', wb=wb_exercise,
+                                        input_cols=[Exercise_Id], 
+                                        input_to_local_cols=['Id'], 
+                                        Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet_ex,row=data_row)
+    
+    c_prop = Counter(names_ex)
+    for i in range(c_prop['Properties']):
+            entry_prop,entry_prop_columns  = work_on_entry(wb=wb_exercise,table_name='Properties',
+                                        input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
+                                        Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet_ex,row=data_row, table_name_number=i)
+        
+    
+    #next sheet, confusionbox
+    
+    case_vocab = False
+    vocab = []
+    case_mp = False
+    mp = []
+    case_nw = False
+    nw = []
+    for sheetname in wb_exercise.sheetnames:
+        if 'Vocab' in  sheetname:
+            case_vocab = True
+            vocab.append(sheetname)
+        elif 'MP' in sheetname:
+            #work on Vocab-Confusion Box
+            case_mp = True
+            mp.append(sheetname)
+        elif 'Nonword' in sheetname:
+            case_nw = True
+            nw.append(sheetname)
+        else:
+            pass
+
+    if case_vocab:
+        first_run = True
+        print(vocab)
+        max_info = []
+        for sheet_name in vocab:
+            sheet = wb_exercise[sheet_name]
+            max_info.append(sheet.max_row)
+        isequal = all_equal(max_info)
+        if isequal:
+            max_row = max_info[0]
+        else:
+            print('something wrong with number of rows, terminating')
+            exit()
+
+        data_row = 3
+        sheet_name = [s for s in vocab if 'Confusion' in s][0]
+        print(sheet_name)
+        sheet = wb_exercise[sheet_name]
+        names,columns,ranges = get_sheet_structure(sheet = sheet)
+
+        sheet_name = [s for s in vocab if 'Words Properties' in s][0]
+        print(sheet_name)
+        sheet_wp = wb_exercise[sheet_name]
+        names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
+
+        
+
+        #sheet_wp = wb_exercise[sheet_name]
+        #names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
+        
+        for row in range(data_row,max_row+1):
+            #start with confusionbox    
+            if first_run == True:
+                first_run = False
+                entry_cb,entry_cb_columns  = work_on_entry(wb=wb_exercise,table_name='ConfusionBoxes',
+                                        input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet,row=row, table_name_number=0) 
+
+                
+                
+                                    
+            else:
+                entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
+                if entry != entry_cb:                          
+                    replace_entry(sheet=sheet,entry=entry_cb,entry_range=entry_range)
+                    wb_exercise.save(str(exercise_file))
+
+            #words            
+            entry_word, entry_word_columns = work_on_entry(table_name='Words', wb=wb_exercise,
+                                        input_col=False, input_to_local_col=False, modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet,row=row,table_name_number=0) 
+            
+            
+            
+            #transcriptions
+
+            #entries = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row,columns=columns)
+            
+            c = Counter(names)
+            for num in range(c['Transcriptions']):
+                entry_trans, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
+                                            input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
+                                            modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet,row=row,table_name_number=num) 
+                if num == 0:
+                    entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                                        input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
+                                        input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet,row=row)
+                else:
+                    pass
+                sheet_name = [s for s in vocab if 'Speaker_Trans_'+str(num) in s][0]
+                sheet_st = wb_exercise[sheet_name]
+                names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
+
+                entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_st,table_name='Words', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                print(entry, entry_word)
+                
+                if entry != entry_word:                          
+                    replace_entry(sheet=sheet_st,entry=entry_word,entry_range=entry_range)
+                    wb_exercise.save(str(exercise_file))
+
+                entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_st,table_name='Transcriptions', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                print(entry, entry_trans)
+                
+                
+                if entry != entry_trans:                          
+                    replace_entry(sheet=sheet_st,entry=entry_trans,entry_range=entry_range)
+                    wb_exercise.save(str(exercise_file))
+                
+
+                c_pron = Counter(names_st)
+                for pron_num in range(c_pron['Pronunciations']):
+                    print(pron_num)
+                    entry_pron, entry_pron_columns = work_on_entry(table_name='Pronunciations', wb=wb_exercise,
+                                            input_col=entry_trans[entry_trans_columns.index('Id')], input_to_local_col='Transcription_Id', 
+                                            modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet_st,row=row,table_name_number=pron_num) 
+            #the next sheet
+            entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[0]
+            if entry != entry_word:  
+                print(entry, entry_word)                        
+                replace_entry(sheet=sheet_wp,entry=entry_word,entry_range=entry_range)
+                wb_exercise.save(str(exercise_file))
+            
+            c = Counter(names_wp)
+            print(c['Properties'])
+            for i in range(c['Properties']):
+                print(i)
+                entry_prop, entry_prop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
+                                        input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet_wp,row=row,table_name_number=0)
+
+    elif case_mp:
+        print(mp)
+    elif case_nw:
+        print(nw)
+    else:
+        pass
+
+               
+
+
+
 
 def main(folder,cursor, cnxn):
     path = Path(folder)
@@ -310,200 +507,11 @@ def main(folder,cursor, cnxn):
         
         
         for line in to_submit:
-            #structure file changes
-            Create_Entry, [Wrapper_Id, Exercise_Id] = check_exerciseid_in_structure(wb_s=wb_structure, cursor=cursor, row=line)
-            print([Wrapper_Id, Exercise_Id] )
-            entry_wrex= [Wrapper_Id, Exercise_Id]
-            if Create_Entry:
-                wb_structure.save(filename=(str(structure_path))) 
-                cnxn.commit()
-            else:
-                pass
-            #open an exercise.xlsx
-
-            
-            
-            exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)))
-            exercise_file = exercise_path/'exercise.xlsx'
-            print(str(exercise_file))
-            wb_exercise = load_workbook(str(exercise_file))
-            data_row = 3
-            sheet_ex = wb_exercise['Exercise']
-            names_ex,columns_ex,ranges_ex = get_sheet_structure(sheet = sheet_ex)
-            
-            entry_ex,entry_ex_range,entry_ex_columns = get_entry_by_name(sheet=sheet_ex,table_name='WrapperExercises', names=names_ex,ranges=ranges_ex,row=data_row,columns=columns_ex)[0]
-            
-            
-            if entry_ex != entry_wrex:                          
-                replace_entry(sheet=sheet_ex,entry=entry_wrex,entry_range=entry_ex_range)
-                wb_exercise.save(str(exercise_file))
-
-
-            entry_ex, entry_ex_columns = work_on_entry_with_no_id(table_name='Exercises', wb=wb_exercise,
-                                                input_cols=[Exercise_Id], 
-                                                input_to_local_cols=['Id'], 
-                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet_ex,row=data_row)
-            
-            c_prop = Counter(names_ex)
-            for i in range(c_prop['Properties']):
-                 entry_prop,entry_prop_columns  = work_on_entry(wb=wb_exercise,table_name='Properties',
-                                                input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
-                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet_ex,row=data_row, table_name_number=i)
-                
-            
-            #next sheet, confusionbox
-            
-            case_vocab = False
-            vocab = []
-            case_mp = False
-            mp = []
-            case_nw = False
-            nw = []
-            for sheetname in wb_exercise.sheetnames:
-                if 'Vocab' in  sheetname:
-                    case_vocab = True
-                    vocab.append(sheetname)
-                elif 'MP' in sheetname:
-                    #work on Vocab-Confusion Box
-                    case_mp = True
-                    mp.append(sheetname)
-                elif 'Nonword' in sheetname:
-                    case_nw = True
-                    nw.append(sheetname)
-                else:
-                    pass
-
-            if case_vocab:
-                first_run = True
-                print(vocab)
-                max_info = []
-                for sheet_name in vocab:
-                    sheet = wb_exercise[sheet_name]
-                    max_info.append(sheet.max_row)
-                isequal = all_equal(max_info)
-                if isequal:
-                    max_row = max_info[0]
-                else:
-                    print('something wrong with number of rows, terminating')
-                    exit()
-
-                data_row = 3
-                sheet_name = [s for s in vocab if 'Confusion' in s][0]
-                print(sheet_name)
-                sheet = wb_exercise[sheet_name]
-                names,columns,ranges = get_sheet_structure(sheet = sheet)
-
-                sheet_name = [s for s in vocab if 'Words Properties' in s][0]
-                print(sheet_name)
-                sheet_wp = wb_exercise[sheet_name]
-                names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
-
-                
-
-                #sheet_wp = wb_exercise[sheet_name]
-                #names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
-                Force_Rewrite = False
-                for row in range(data_row,max_row+1):
-                    #start with confusionbox    
-                    if first_run == True:
-                        first_run = False
-                        entry_cb,entry_cb_columns  = work_on_entry(wb=wb_exercise,table_name='ConfusionBoxes',
-                                                input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
-                                                Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet,row=row, table_name_number=0) 
-
-                        
-                        
-                                         
-                    else:
-                        entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
-                        if entry != entry_cb:                          
-                            replace_entry(sheet=sheet,entry=entry_cb,entry_range=entry_range)
-                            wb_exercise.save(str(exercise_file))
-
-                    #words            
-                    entry_word, entry_word_columns = work_on_entry(table_name='Words', wb=wb_exercise,
-                                                input_col=False, input_to_local_col=False, modify_col='Id',
-                                                Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet,row=row,table_name_number=0) 
-                    
-                    
-                    
-                    #transcriptions
-
-                    #entries = get_entry_by_name(sheet=sheet,table_name='Transcriptions', names=names,ranges=ranges,row=row,columns=columns)
-                    
-                    c = Counter(names)
-                    for num in range(c['Transcriptions']):
-                        entry_trans, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
-                                                    input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
-                                                    modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                    sheet=sheet,row=row,table_name_number=num) 
-                        if num == 0:
-                            entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
-                                                input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
-                                                input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
-                                                Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet,row=row)
-                        else:
-                            pass
-                        sheet_name = [s for s in vocab if 'Speaker_Trans_'+str(num) in s][0]
-                        sheet_st = wb_exercise[sheet_name]
-                        names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
-
-                        entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_st,table_name='Words', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
-                        print(entry, entry_word)
-                        
-                        if entry != entry_word:                          
-                            replace_entry(sheet=sheet_st,entry=entry_word,entry_range=entry_range)
-                            wb_exercise.save(str(exercise_file))
-
-                        entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_st,table_name='Transcriptions', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
-                        print(entry, entry_trans)
-                        
-                        
-                        if entry != entry_trans:                          
-                            replace_entry(sheet=sheet_st,entry=entry_trans,entry_range=entry_range)
-                            wb_exercise.save(str(exercise_file))
-                        
-
-                        c_pron = Counter(names_st)
-                        for pron_num in range(c_pron['Pronunciations']):
-                            print(pron_num)
-                            entry_pron, entry_pron_columns = work_on_entry(table_name='Pronunciations', wb=wb_exercise,
-                                                    input_col=entry_trans[entry_trans_columns.index('Id')], input_to_local_col='Transcription_Id', 
-                                                    modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                    sheet=sheet_st,row=row,table_name_number=pron_num) 
-                  #the next sheet
-                    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[0]
-                    if entry != entry_word:  
-                        print(entry, entry_word)                        
-                        replace_entry(sheet=sheet_wp,entry=entry_word,entry_range=entry_range)
-                        wb_exercise.save(str(exercise_file))
-                    
-                    c = Counter(names_wp)
-                    print(c['Properties'])
-                    for i in range(c['Properties']):
-                        print(i)
-                        entry_prop, entry_prop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
-                                                input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', modify_col='Id',
-                                                Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                                sheet=sheet_wp,row=row,table_name_number=0)
-
-            elif case_mp:
-                print(mp)
-            elif case_nw:
-                print(nw)
-            else:
-                pass
-
+            work_with_line_in_structure_lessons(line=line,wb_structure=wb_structure,cursor=cursor,cnxn=cnxn,
+                                                  structure_path=structure_path,sheet=sheet,path_root=path, Force_Rewrite= False)
     else:
         print("No exercise file here. quitting")
-        exit()                
-
-
+        exit() 
 
 
 if __name__ == "__main__":
