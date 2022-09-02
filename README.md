@@ -17,4 +17,6 @@
                 main(folder=folder) 
  - [check_db_vs_excel_consistency.py](check_db_vs_excel_consistency.py) -- checks some columns to be consistent between each other    
  - [course_structure_db_excel.py](course_structure_db_excel.py) -- extracts the structure of lessons from folders with excel files
+ - [actions_submit.py](actions_submit)  -- major script which takes lesson structure file 'lessons_structure.xlsx' and if there are occurances of "submit" command in       the _Actions_ column will add exercises to the database
+  
 
