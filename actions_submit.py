@@ -1,25 +1,13 @@
-
-from calendar import c
 from collections import Counter
-from natsort import natsorted
 from itertools import groupby
 from pathlib import Path
 from openpyxl import load_workbook
-from openpyxl.utils.cell import get_column_interval
-from openpyxl import Workbook
-from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
-from openpyxl.worksheet.table import Table, TableStyleInfo
-import diff_folder_and_mysql
-import course_structure_db_excel
-from scan_for_missing_sound import missing_in_excel
 from diff_folder_and_mysql import get_sheet_structure 
 import pyodbc 
-
 
 def all_equal(iterable):
     g = groupby(iterable)
     return next(g, True) and not next(g, False)
-
 
 def get_column(sheet, row, name):
     col = []
@@ -96,7 +84,6 @@ def check_exerciseid_in_structure(wb_s,cursor,row):
         pass
     return Create_Entry,[Wrapper_Id,Exercise_Id]
 
-
 def indices(lst, item):
     return [i for i, x in enumerate(lst) if x == item]
 
@@ -113,7 +100,6 @@ def get_entry_by_name(sheet, table_name, names, columns,ranges, row):
         entries.append((entry,range,columns[index]))
     return entries
 
-
 def replace_entry(sheet,entry, entry_range):
     min_col, min_row,max_col,max_row=entry_range
     index = 0
@@ -121,8 +107,6 @@ def replace_entry(sheet,entry, entry_range):
         cell = sheet.cell(row=min_row, column=col)
         cell.value = entry[index]
         index = index + 1
-
-
 
 def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row, table_name_number):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
@@ -214,9 +198,6 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
         pass
     return entry, entry_columns
 
-
-
-
 def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
@@ -287,7 +268,6 @@ def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, 
     else:
         pass
     return entry, entry_columns
-
 
 def work_with_line_in_structure_lessons(line, wb_structure, structure_file, course_sheet, course_path, Force_Rewrite, cursor, cnxn):
     path=course_path
@@ -496,10 +476,6 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         pass
 
                
-
-
-
-
 def main(course_folder,cursor, cnxn):
     path = Path(course_folder)
     #the path to the course summary file
@@ -529,7 +505,6 @@ def main(course_folder,cursor, cnxn):
         print("No exercise file here. quitting")
         exit() 
 
-
 if __name__ == "__main__":
     ser_file = open('server_private.md','r')
     info = []
@@ -544,3 +519,4 @@ if __name__ == "__main__":
     #folder = 'G:\\My Drive\\CALST_courses\\Spanish_course_styled\\'
     main(course_folder=folder, cursor=cursor, cnxn=cnxn)
     cnxn.commit()
+    cnxn.close()
