@@ -93,7 +93,7 @@ def check_exerciseid_in_structure(wb_s,cursor,row):
         
     else:
         pass
-    return Create_Entry,Wrapper_Id,Exercise_Id
+    return Create_Entry,[Wrapper_Id,Exercise_Id]
 
 def work_on_exercises_sheet(wb,cursor,cnxn, Wrapper_Id, Exercise_Id):
     sheet = wb['Exercise']
@@ -444,22 +444,49 @@ def main(folder,cursor, cnxn):
         
         for line in to_submit:
             #structure file changes
-            Create_Entry, Wrapper_Id, Exercise_Id = check_exerciseid_in_structure(wb_s=wb_structure, cursor=cursor, row=line)
+            Create_Entry, [Wrapper_Id, Exercise_Id] = check_exerciseid_in_structure(wb_s=wb_structure, cursor=cursor, row=line)
+            print([Wrapper_Id, Exercise_Id] )
+            entry_wrex= [Wrapper_Id, Exercise_Id]
             if Create_Entry:
                 wb_structure.save(filename=(str(structure_path))) 
+                cnxn.commit()
             else:
                 pass
             #open an exercise.xlsx
 
+            
+            
             exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)))
             exercise_file = exercise_path/'exercise.xlsx'
             print(str(exercise_file))
             wb_exercise = load_workbook(str(exercise_file))
-            Edit_Excel = work_on_exercises_sheet(wb=wb_exercise,cursor=cursor, cnxn=cnxn, Wrapper_Id=Wrapper_Id,Exercise_Id=Exercise_Id)
-            if Edit_Excel:
-                 wb_exercise.save(str(exercise_file))
-            else:
-                pass
+            data_row = 3
+            sheet_ex = wb_exercise['Exercise']
+            names_ex,columns_ex,ranges_ex = get_sheet_structure(sheet = sheet_ex)
+            
+            entry_ex,entry_ex_range,entry_ex_columns = get_entry_by_name(sheet=sheet_ex,table_name='WrapperExercises', names=names_ex,ranges=ranges_ex,row=data_row,columns=columns_ex)[0]
+            
+            
+            if entry_ex != entry_wrex:                          
+                replace_entry(sheet=sheet_ex,entry=entry_wrex,entry_range=entry_ex_range)
+                wb_exercise.save(str(exercise_file))
+
+
+            entry_ex, entry_ex_columns = work_on_entry_with_no_id(table_name='Exercises', wb=wb_exercise,
+                                                input_cols=[Exercise_Id], 
+                                                input_to_local_cols=['Id'], 
+                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet_ex,row=data_row)
+            
+            c_prop = Counter(names_ex)
+            for i in range(c_prop['Properties']):
+                 entry_prop,entry_prop_columns  = work_on_entry(wb=wb_exercise,table_name='Properties',
+                                                input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
+                                                Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                                sheet=sheet_ex,row=data_row, table_name_number=i)
+                
+            
+            #next sheet, confusionbox
             
             case_vocab = False
             vocab = []
