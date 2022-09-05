@@ -201,72 +201,62 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
 def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
-    print(entry,'here')
-    isnone = False
-    if all_equal(entry):
-        if entry[0] == None:
-            isnone = True
-        else:
-            pass
-    else:
-        pass
-    print(isnone)   
-    if isnone == False:
-        Edit_Excel = False
+    print(entry,'here we are')
+    
 
-        for index,input in enumerate(input_to_local_cols):
-            if entry[entry_columns.index(input)] != input_cols[index]:
-                entry[entry_columns.index(input)] = input_cols[index]
-                Edit_Excel = True
-            else:
-                pass
+    Edit_Excel = False
 
-        
-        sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
-        count = 0
-        for id in entry_columns:
-            cell_value = entry[entry_columns.index(id)]
-            if isinstance(cell_value, str):
-                string = '\''+str(cell_value)+'\''
-            else:
-                string = str(cell_value)
-            if count == 0:
-                sqlcommand = sqlcommand + ' WHERE '+ id + ' = ' + string
-            else: 
-                sqlcommand = sqlcommand + ' AND '+ id + ' = ' + string
-            count = count + 1
-        cursor.execute(sqlcommand)
-        list = cursor.fetchall()
-        if not list:
-            Create_Entry = True 
+    for index,input in enumerate(input_to_local_cols):
+        if entry[entry_columns.index(input)] != input_cols[index]:
+            entry[entry_columns.index(input)] = input_cols[index]
             Edit_Excel = True
         else:
             pass
-        
-        if Create_Entry:
-            
-            sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
-            count = 0
-            for id in entry_columns:
-                if count == 0:
-                    sqlcommand_insert = sqlcommand_insert+'?'
-                else:
-                    sqlcommand_insert = sqlcommand_insert+',?'
-                count = count + 1
-            sqlcommand_insert = sqlcommand_insert+')'
-            cursor.execute(sqlcommand_insert,entry)
-            cnxn.commit()
-            
+
+    
+    sqlcommand = 'SELECT * FROM [CalstContent].[dbo].['+table_name + ']'
+    count = 0
+    for id in entry_columns:
+        cell_value = entry[entry_columns.index(id)]
+        if isinstance(cell_value, str):
+            string = '\''+str(cell_value)+'\''
         else:
-            print('db entry exists')
-        
-        if Edit_Excel:
-            replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
-            wb.save(str(exercise_file))    
-        else:
-            print('No edits to Excel')
+            string = str(cell_value)
+        if count == 0:
+            sqlcommand = sqlcommand + ' WHERE '+ id + ' = ' + string
+        else: 
+            sqlcommand = sqlcommand + ' AND '+ id + ' = ' + string
+        count = count + 1
+    cursor.execute(sqlcommand)
+    list = cursor.fetchall()
+    if not list:
+        Create_Entry = True 
+        Edit_Excel = True
     else:
         pass
+    
+    if Create_Entry:
+        
+        sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
+        count = 0
+        for id in entry_columns:
+            if count == 0:
+                sqlcommand_insert = sqlcommand_insert+'?'
+            else:
+                sqlcommand_insert = sqlcommand_insert+',?'
+            count = count + 1
+        sqlcommand_insert = sqlcommand_insert+')'
+        cursor.execute(sqlcommand_insert,entry)
+        cnxn.commit()
+        
+    else:
+        print('db entry exists')
+    
+    if Edit_Excel:
+        replace_entry(sheet=sheet,entry=entry,entry_range=entry_range)
+        wb.save(str(exercise_file))    
+    else:
+        print('No edits to Excel')
     return entry, entry_columns
 
 def work_with_line_in_structure_lessons(line, wb_structure, structure_file, course_sheet, course_path, Force_Rewrite, cursor, cnxn):
@@ -346,6 +336,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
         # was introduced
         first_run = True
+        Force_Rewrite = False
         print(vocab)
         max_info = []
         #this checks whether all sheets have the same number of lines as it should be. Consistency check.
@@ -354,7 +345,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             max_info.append(sheet.max_row)
         isequal = all_equal(max_info)
         if isequal:
-            max_row = max_info[0]
+            maximum_row = max_info[0]
         else:
             print('something wrong with number of rows, terminating')
             exit()
@@ -371,9 +362,22 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         print(sheet_name)
         sheet_wp = wb_exercise[sheet_name]
         names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
-
-        #iterate over all datalines and over sheets further on
-        for row in range(data_row,max_row+1):
+        
+        min_col, min_row, max_col, max_row = ranges_wp[names_wp.index('Words')]
+        for row in range(3,sheet_wp.max_row+1):
+            cell = sheet_wp.cell(row=row,column=min_col+columns_wp[names_wp.index('Words')].index('Text'))
+            if cell.value == None:
+                break
+                
+        
+        max_word = row-1
+        print(max_word, maximum_row)
+        if maximum_row != max_word:
+            maximum_row = max_word
+        
+        print(maximum_row)
+        exit()
+        for row in range(data_row,maximum_row+1):
             #start with confusionbox,
             # this will either create a new confusionbox id or just replace current entry with the same confusionbox id details, 
             # just one entry for all the lines in case of vocab    
@@ -403,19 +407,29 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             #for Spanish, Greak and Italian there are 2 speakers and thus two transcriptions fileds, but for Norwegian there could be mulriple, 
             # which looks wrong a bit
             c = Counter(names)
+            print(c['Transcriptions'])
+            
             for num in range(c['Transcriptions']):
                 #transcription, wordid and id columns
                 entry_trans, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
                                             input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
                                             modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                            sheet=sheet,row=row,table_name_number=num) 
+                                            sheet=sheet,row=row,table_name_number=num)
+                print(entry_trans, entry_trans_columns) 
                 if num == 0:
+                    print(num, "here")
                     #transcriptionconfusionboxes binds two Speakers with a confusionbox id, via just one transcription id
-                    entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
-                                        input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
-                                        input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
-                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                        sheet=sheet,row=row)
+                    print(entry_cb, entry_trans, "here we are")
+                    try:
+                        entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                                            input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
+                                            input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
+                                            Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet,row=row)
+                    except:
+                        pass
+                    print(entry_cb_trans, entry_cb_trans_columns)
+                    
                 else:
                     pass
                 #here we go to speaker transciptrion sheets, where sound files for speakers are specified
@@ -459,15 +473,17 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                 wb_exercise.save(str(exercise_file))
             
             c = Counter(names_wp)
-            print(c['Properties'])
+            print(c['Properties'], "here")
             #can be more than 1 properties, iterate
+            
             for i in range(c['Properties']):
-                print(i)
+                print(i,"here")
                 entry_prop, entry_prop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
                                         input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', modify_col='Id',
                                         Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                        sheet=sheet_wp,row=row,table_name_number=0)
-
+                                        sheet=sheet_wp,row=row,table_name_number=i)
+                print(entry_prop, entry_prop_columns)
+            
     elif case_mp:
         print(mp)
     elif case_nw:
@@ -515,8 +531,8 @@ if __name__ == "__main__":
     #connect to the calst database
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
-    folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
-    #folder = 'G:\\My Drive\\CALST_courses\\Spanish_course_styled\\'
+    #folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
+    folder = 'G:\\My Drive\\CALST_courses\\Spanish_course_styled\\'
     main(course_folder=folder, cursor=cursor, cnxn=cnxn)
     cnxn.commit()
     cnxn.close()
