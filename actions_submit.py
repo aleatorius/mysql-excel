@@ -376,7 +376,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             maximum_row = max_word
         
         print(maximum_row)
-        exit()
+    
         for row in range(data_row,maximum_row+1):
             #start with confusionbox,
             # this will either create a new confusionbox id or just replace current entry with the same confusionbox id details, 
