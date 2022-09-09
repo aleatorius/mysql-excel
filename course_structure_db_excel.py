@@ -210,7 +210,6 @@ def main(folder, output):
     header_0_wrapper = len(level[3][0])*level[2]    
     header_wrapper = level[3][0]
     header_cells.append(len(level[3][0]))
-    
     newline = []
     newline.append(level[1])
     name_structure.append(newline)
@@ -234,12 +233,9 @@ def main(folder, output):
         wrapper_structure.append(level[0])
         
         for lesson in natsorted(lessons):
-            print(lesson)
             folder = folder_path/chapter/lesson
-            
             wrapper = folder/'wrapper.xlsx'
             level=get_wrapper(wrapper=wrapper)
-
             newline = 2*['']
             newline.append(level[1])
             folders.append(os.path.abspath(folder).replace(root,'..'))
@@ -283,6 +279,13 @@ def main(folder, output):
                     wrapper = folder/'exercise.xlsx'
                     if wrapper.exists():
                         level = get_exercise(wrapper=wrapper)
+                        if first_time == True:
+                            header_ex_id = level[2]
+                            header_ex = level[3] 
+                            header_cells.append(len(header_ex))
+                            first_time = False
+                        else:
+                            pass
                         newline = 3*['']
                         newline.append(level[1])
                         folders.append(os.path.abspath(folder).replace(root,'..'))
@@ -290,7 +293,6 @@ def main(folder, output):
                         name_structure.append(newline)
                     else:
                         pass
-
     header_0 = header_0 + header_0_wrapper+header_ex+['Folders']
     header = header + header_wrapper+header_ex_id+['Relative path']
     header_cells = header_cells + [1]
@@ -322,6 +324,7 @@ if __name__ == "__main__":
         #folder='C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\\Numbers 1'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 2\\Nationalities'
-        folder = 'C:\Source\Repos\mysql-excel\Greek_course_styled'
+        #folder = 'C:\Source\Repos\mysql-excel\Greek_course_styled'
+        folder = 'C:\Source\Repos\mysql-excel\Italian_course'
         output = 'lessons_structure.xlsx'
         main(folder=folder,output= output)
