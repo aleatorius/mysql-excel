@@ -120,6 +120,6 @@ def main(folder):
   
 if __name__ == "__main__":
 
-    folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
-    #folder = 'G:\\My Drive\\CALST_courses\\Spanish_course_styled\\'
+    folder = 'C:\\Source\\Repos\\mysql-excel\\Italian_course_styled\\'
+    #folder = 'G:\\My Drive\\CALST_courses\\Italain_course_styled\\'
     main(folder=folder)
