@@ -4,6 +4,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 from diff_folder_and_mysql import get_sheet_structure 
 import pyodbc 
+import os
+import shutil
 
 def all_equal(iterable):
     g = groupby(iterable)
@@ -21,11 +23,13 @@ def get_column(sheet, row, name):
         print('Warning! Several cols with name '+name+ ' exiting')
         exit()
 
-def check_exerciseid_in_structure(wb_s,cursor,row):
+def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
     #it checks wrapper and wrappereercise for id and wrapper_id and for exercise_id
     sheet = wb_s['Lessons']
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     min_col, min_row,max_col,max_row=ranges[names.index('WrapperExercises')]
+    Create_Entry = False
+    Edit_Excel = False
     data = []
     coord = []
     ids = columns[names.index('WrapperExercises')]
@@ -34,13 +38,181 @@ def check_exerciseid_in_structure(wb_s,cursor,row):
             data.append(cell.value)
             coord.append((cell.row,cell.column))
     print("excel data: ",data, ids, coord)
-    
-    #compare wrapper id of an exercise with id of its parent folder from Wrappers columns    
+
     min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
     for cells in sheet.iter_cols(min_col=min_col,min_row=2, max_col=max_col, max_row=2):
         for cell in cells:
             if cell.value == 'Id':
                 Wrapper_Id_column = cell.column
+                
+    min_col, min_row,max_col,max_row=ranges[names.index('Level names')]
+    level = []
+    for cells in sheet.iter_cols(min_col=min_col,min_row=row, max_col=max_col, max_row=row):
+        for cell in cells:
+            level.append(cell.value)
+    print(level)
+    
+    level_name = next(item for item in level if item is not None)
+    print(level.index(level_name))
+    finished = False
+    level_row = row
+    ladder = []
+    ladder_val = 1
+    ladder_bottom = []
+    while not level_row == 3:
+        level_row = level_row - 1
+        if sheet.cell(row=level_row,column=min_col + level.index(level_name)-ladder_val).value:
+            parent = sheet.cell(row=level_row,column=min_col + level.index(level_name)-ladder_val).value
+            #if sheet.cell(row=level_row,column=Wrapper_Id_column).value:
+            ladder.append((parent,level_row))
+            #else:
+            #    ladder.append((parent,level_row))
+            ladder_val = ladder_val + 1
+                
+            #    pass
+    print(ladder)
+    #check ladder
+    #check entry point
+    min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
+    entry = []
+    for cells in sheet.iter_cols(min_col=min_col,min_row=ladder[-1][-1], max_col=max_col, max_row=ladder[-1][-1]):
+        for cell in cells:
+            entry.append(cell.value)
+    print(entry)
+    sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Wrappers]'
+    count = 0
+    print(columns[names.index('Wrappers')])
+    
+    
+    for id in columns[names.index('Wrappers')]:
+        print(id)
+        cell_value = entry[columns[names.index('Wrappers')].index(id)]
+        print(cell_value)
+        if cell_value == True:
+            cell_value = 1
+        elif cell_value == False:
+            cell_value = 0
+        else:
+            pass
+        if cell_value != None:
+            if isinstance(cell_value, str):
+                string = '\''+str(cell_value)+'\''
+            else:
+                string = str(cell_value)
+            if count == 0:
+                sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
+            else: 
+                sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
+        else:
+            pass
+        count = count + 1
+    print(sqlcommand)
+    cursor.execute(sqlcommand)
+    list = cursor.fetchall()
+    if list:
+        pass
+    else:
+        if entry[columns[names.index('Wrappers')].index('Id')] == None or entry[columns[names.index('Wrappers')].index('Name')] == None or  entry[columns[names.index('Wrappers')].index('Level')] or entry[columns[names.index('Wrappers')].index('RelatedLanguage_Id')] == None:
+            print("no entry point info, quitting")
+            exit()
+        
+
+    
+    grandpa = int(sheet.cell(row=ladder[-1][-1],column=Wrapper_Id_column).value)
+    print(grandpa)
+    
+    for lad in ladder[:-1][::-1]:
+        min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
+        entry = []
+        for cells in sheet.iter_cols(min_col=min_col,min_row=lad[-1], max_col=max_col, max_row=lad[-1]):
+            for cell in cells:
+                entry.append(cell.value)
+        if entry[columns[names.index('Wrappers')].index('WrapperId')] != grandpa:
+            print("oops")
+            entry[columns[names.index('Wrappers')].index('WrapperId')] = grandpa
+            Create_Entry = True
+            #sheet.cell(row=lad[-1], column = min_col + columns[names.index('Wrappers')].index('WrapperId')+1).value)
+        else:
+            pass
+        if entry[columns[names.index('Wrappers')].index('Id')] == None:
+            Create_Entry = True
+        else:
+            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Wrappers]'
+            count = 0
+            for id in columns[names.index('Wrappers')]:
+                print(id)
+                cell_value = entry[columns[names.index('Wrappers')].index(id)]
+                print(cell_value)
+                if cell_value == True:
+                    cell_value = 1
+                elif cell_value == False:
+                    cell_value = 0
+                else:
+                    pass
+                if cell_value != None:
+                    if isinstance(cell_value, str):
+                        string = '\''+str(cell_value)+'\''
+                    else:
+                        string = str(cell_value)
+                    if count == 0:
+                        sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
+                    else: 
+                        sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
+                else:
+                    pass
+                count = count + 1
+            print(sqlcommand)
+           
+            cursor.execute(sqlcommand)
+            list = cursor.fetchall()
+            if list:
+                pass
+            else:
+                Create_Entry= True
+            
+            
+        
+
+        
+        if Create_Entry == True:
+            sqlcommand = 'SELECT MAX(Id) AS maximum FROM Wrappers'
+
+            cursor.execute(sqlcommand)
+            grandpa = cursor.fetchall()[0][0]+1
+            entry[columns[names.index('Wrappers')].index('Id')] = grandpa
+            sqlcommand_insert = 'INSERT INTO [dbo].[Wrappers] VALUES('
+            count = 0
+            for id in columns[names.index('Wrappers')]:
+                if count == 0:
+                    sqlcommand_insert = sqlcommand_insert+'?'
+                else:
+                    sqlcommand_insert = sqlcommand_insert+',?'
+                count = count + 1
+            sqlcommand_insert = sqlcommand_insert+')'
+            print(sqlcommand_insert)
+            Edit_Excel = True
+            cursor.execute(sqlcommand_insert,entry)
+            cnxn.commit()
+        else:
+            grandpa = entry[columns[names.index('Wrappers')].index('Id')]
+        if Edit_Excel:
+            min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
+            print(min_col, min_row,max_col,max_row)
+            count = 0
+            for col in range(min_col,max_col+1):
+                sheet.cell(row = lad[-1], column = col).value = entry[count]
+                print(count, sheet.cell(row = lad[-1], column = col).value)
+                count = count + 1
+            wb_s.save(structure_file)
+            
+        else:
+            print('No edits to Excel')
+        
+    #compare wrapper id of an exercise with id of its parent folder from Wrappers columns    
+    
+    Create_Entry = False
+
+    min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
     #search for parent wrapper id scrolling upward
     finished = False
     wrapper_id_row = row
@@ -49,6 +221,9 @@ def check_exerciseid_in_structure(wb_s,cursor,row):
         if sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value:
             finished = True
             Wrapper_Id = sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value
+            if not Wrapper_Id:
+                pass
+
     #check where whrapper_id coincides with wrapper id, if not, replace with parents id
     if data[ids.index('Wrapper_Id')] == Wrapper_Id:
         pass
@@ -146,7 +321,7 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
                     pass
                 if cell_value != None:
                     if isinstance(cell_value, str):
-                        string = '\''+str(cell_value)+'\''
+                        string = '\''+str(cell_value).replace("'","''")+'\''
                     else:
                         string = str(cell_value)
                     if count == 0:
@@ -265,8 +440,9 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     folder_col = get_column(sheet=sheet, row=1, name='Folders')
     #structure file changes
     #check wrapper_id exercise_id info, and replace it if needed
-    Create_Entry, [Wrapper_Id, Exercise_Id] = check_exerciseid_in_structure(wb_s=wb_structure, cursor=cursor, row=line)
+    Create_Entry, [Wrapper_Id, Exercise_Id] = check_exerciseid_in_structure(structure_file = structure_file, cnxn=cnxn, wb_s=wb_structure, cursor=cursor, row=line)
     print([Wrapper_Id, Exercise_Id] )
+    
     entry_wrex= [Wrapper_Id, Exercise_Id]
     if Create_Entry:
         wb_structure.save(filename=(str(structure_file))) 
@@ -278,6 +454,17 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     #open an exercise.xlsx
     exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)))
     exercise_file = exercise_path/'exercise.xlsx'
+    sounds_folder = exercise_path/'sound_files'
+    dst_path = Path(r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent\Italian\OriginalWords_Wav')
+    if sounds_folder.exists:
+        for filename in os.listdir(str(sounds_folder)):
+            sound_file =  sounds_folder/filename
+            dest_file = dst_path/filename
+            if dest_file.exists:
+                pass
+            else:
+                shutil.copy(str(sound_file), str(dst_path))
+    
     print(str(exercise_file))
 
     wb_exercise = load_workbook(str(exercise_file))
@@ -376,7 +563,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             maximum_row = max_word
         
         print(maximum_row)
-    
+        
         for row in range(data_row,maximum_row+1):
             #start with confusionbox,
             # this will either create a new confusionbox id or just replace current entry with the same confusionbox id details, 
@@ -532,7 +719,7 @@ if __name__ == "__main__":
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
     #folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
-    folder = 'G:\\My Drive\\CALST_courses\\Spanish_course_styled\\'
+    folder = 'G:\\My Drive\\CALST_courses\\Italian_course_styled\\'
     main(course_folder=folder, cursor=cursor, cnxn=cnxn)
     cnxn.commit()
     cnxn.close()
