@@ -6,6 +6,8 @@ import pyodbc
 
 
 def remove_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
+    print(row)
+
     Edit_Excel = False
     #it checks wrapper and wrappereercise for id and wrapper_id and for exercise_id
     sheet = wb_s['Lessons']
@@ -15,42 +17,14 @@ def remove_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
     for cells in sheet.iter_cols(min_col=min_col,min_row=row, max_col=max_col, max_row=row):
         for cell in cells:
             entry.append(cell.value)
-    sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[WrapperExercises]'
-    count = 0
-    for id in columns[names.index('WrapperExercises')]:
-        print(id)
-        cell_value = entry[columns[names.index('WrapperExercises')].index(id)]
-        if cell_value == True:
-            cell_value = 1
-        elif cell_value == False:
-            cell_value = 0
-        else:
-            pass
-        if cell_value != None:
-            if isinstance(cell_value, str):
-                string = '\''+str(cell_value)+'\''
-            else:
-                string = str(cell_value)
-            if count == 0:
-                sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
-            else: 
-                sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
-        else:
-            pass
-        count = count + 1
-
-
-    cursor.execute(sqlcommand)
-    list = cursor.fetchall()
-    print(list)
-    
-    if list:
-        sqlcommand = 'DELETE FROM [CalstContent].[dbo].[WrapperExercises]'
+    if all(x is None for x in entry):
+        pass
+    else:
+        sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[WrapperExercises]'
         count = 0
         for id in columns[names.index('WrapperExercises')]:
             print(id)
             cell_value = entry[columns[names.index('WrapperExercises')].index(id)]
-            print(cell_value)
             if cell_value == True:
                 cell_value = 1
             elif cell_value == False:
@@ -69,33 +43,65 @@ def remove_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
             else:
                 pass
             count = count + 1
-        print(sqlcommand)
-        
-        cursor.execute(sqlcommand)
-        cnxn.commit()
-        Edit_Excel = True
-            
-    else:
-        pass
-        
 
-    
-    if Edit_Excel:
-        min_col, min_row,max_col,max_row=ranges[names.index('WrapperExercises')]
-        print(min_col, min_row,max_col,max_row)
-        count = 0
-        for col in range(min_col,max_col+1):
-            print(count, sheet.cell(row = row, column = col).value)
-            sheet.cell(row = row, column = col).value = None
-            print(count, sheet.cell(row = row, column = col).value)
-            count = count + 1
-      
-        wb_s.save(structure_file)
+
+        cursor.execute(sqlcommand)
+        print(sqlcommand, "before list")
+        list = cursor.fetchall()
+        print(list, "list")
         
-    else:
-        print('No edits to Excel')
-    
-    #compare wrapper id of an exercise with id of its parent folder from Wrappers columns    
+        if list:
+            sqlcommand = 'DELETE FROM [CalstContent].[dbo].[WrapperExercises]'
+            count = 0
+            for id in columns[names.index('WrapperExercises')]:
+                print(id)
+                cell_value = entry[columns[names.index('WrapperExercises')].index(id)]
+                print(cell_value, "here")
+                if cell_value == True:
+                    cell_value = 1
+                elif cell_value == False:
+                    cell_value = 0
+                else:
+                    pass
+                if cell_value != None:
+                    if isinstance(cell_value, str):
+                        string = '\''+str(cell_value)+'\''
+                    else:
+                        string = str(cell_value)
+                    if count == 0:
+                        sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
+                    else: 
+                        sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
+                else:
+                    pass
+                count = count + 1
+            print(sqlcommand)
+            exit()
+            cursor.execute(sqlcommand)
+            cnxn.commit()
+            Edit_Excel = True
+                
+        else:
+            pass
+            
+
+        
+        if Edit_Excel:
+            min_col, min_row,max_col,max_row=ranges[names.index('WrapperExercises')]
+            print(min_col, min_row,max_col,max_row)
+            count = 0
+            for col in range(min_col,max_col+1):
+                print(count, sheet.cell(row = row, column = col).value)
+                sheet.cell(row = row, column = col).value = None
+                print(count, sheet.cell(row = row, column = col).value)
+                count = count + 1
+        
+            wb_s.save(structure_file)
+            
+        else:
+            print('No edits to Excel')
+        
+        #compare wrapper id of an exercise with id of its parent folder from Wrappers columns    
 
 
 
