@@ -267,12 +267,14 @@ def get_entry_by_name(sheet, table_name, names, columns,ranges, row):
     table_indices = indices(names, table_name)
     for index in table_indices:
         entry = []
+        styles = []
         min_col, min_row,max_col,max_row=ranges[index]
         range = (min_col, row, max_col, row) 
         for cells in sheet.iter_cols(min_col=min_col,min_row=row, max_col=max_col, max_row=row):
             for cell in cells:
                 entry.append(cell.value)
-        entries.append((entry,range,columns[index]))
+                styles.append(type(cell.value))
+        entries.append((entry,range,columns[index],styles))
     return entries
 
 def replace_entry(sheet,entry, entry_range):
@@ -285,7 +287,8 @@ def replace_entry(sheet,entry, entry_range):
 
 def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row, table_name_number):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
-    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[table_name_number]
+    entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[table_name_number]
+    print(entry_styles, "here")
     isnone = False
     if all_equal(entry):
         if entry[0] == None:
@@ -375,7 +378,7 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
 
 def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
-    entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
+    entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
     print(entry,'here we are')
     
 
@@ -458,21 +461,27 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     dst_path = Path(r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent\Italian\OriginalWords_Wav')
     if sounds_folder.exists:
         for filename in os.listdir(str(sounds_folder)):
+            print(filename)
             sound_file =  sounds_folder/filename
             dest_file = dst_path/filename
-            if dest_file.exists:
-                pass
+            print(str(dest_file))
+            if os.path.isfile(str(dest_file)):
+                print("it exists")
             else:
                 shutil.copy(str(sound_file), str(dst_path))
+            #if dest_file.exists:
+            #    print("it exists")
+            #else:
+            #shutil.copy(str(sound_file), str(dst_path))
     
     print(str(exercise_file))
-
+   
     wb_exercise = load_workbook(str(exercise_file))
     data_row = 3
     sheet_ex = wb_exercise['Exercise']
     names_ex,columns_ex,ranges_ex = get_sheet_structure(sheet = sheet_ex)
     
-    entry_ex,entry_ex_range,entry_ex_columns = get_entry_by_name(sheet=sheet_ex,table_name='WrapperExercises', names=names_ex,ranges=ranges_ex,row=data_row,columns=columns_ex)[0]
+    entry_ex,entry_ex_range,entry_ex_columns, entry_ex_styles = get_entry_by_name(sheet=sheet_ex,table_name='WrapperExercises', names=names_ex,ranges=ranges_ex,row=data_row,columns=columns_ex)[0]
     
     #wrapper and exercise ids were defined already in sturcure_lessons.xlsx, so just copy it here if needed
     if entry_ex != entry_wrex:                          
@@ -523,13 +532,15 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
         # was introduced
         first_run = True
-        Force_Rewrite = False
+        #Force_Rewrite = False
         print(vocab)
         max_info = []
         #this checks whether all sheets have the same number of lines as it should be. Consistency check.
         for sheet_name in vocab:
             sheet = wb_exercise[sheet_name]
             max_info.append(sheet.max_row)
+        print(max_info)
+        
         isequal = all_equal(max_info)
         if isequal:
             maximum_row = max_info[0]
@@ -557,12 +568,13 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                 break
                 
         
-        max_word = row-1
+        max_word = row
         print(max_word, maximum_row)
         if maximum_row != max_word:
             maximum_row = max_word
         
         print(maximum_row)
+        
         
         for row in range(data_row,maximum_row+1):
             #start with confusionbox,
@@ -577,7 +589,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                                         Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                         sheet=sheet,row=row, table_name_number=0)                       
             else:
-                entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
+                entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
                 if entry != entry_cb:                          
                     replace_entry(sheet=sheet,entry=entry_cb,entry_range=entry_range)
                     wb_exercise.save(str(exercise_file))
@@ -624,14 +636,14 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                 sheet_st = wb_exercise[sheet_name]
                 names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
                 #words and transcription are borrowed from previous confusionbox sheet
-                entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_st,table_name='Words', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Words', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
                 print(entry, entry_word)
                 
                 if entry != entry_word:                          
                     replace_entry(sheet=sheet_st,entry=entry_word,entry_range=entry_range)
                     wb_exercise.save(str(exercise_file))
 
-                entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_st,table_name='Transcriptions', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Transcriptions', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
                 print(entry, entry_trans)
                 
                 
@@ -653,7 +665,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             #the next sheet, Words, where we specify properties of words, normally it is translations and pictures, if any
 
             #words entry is borrowed from a confusionbox sheet
-            entry,entry_range,entry_columns = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[0]
+            entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[0]
             if entry != entry_word:  
                 print(entry, entry_word)                        
                 replace_entry(sheet=sheet_wp,entry=entry_word,entry_range=entry_range)
@@ -695,7 +707,7 @@ def main(course_folder,cursor, cnxn):
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
                 print(str(cell.value).lower())
-                if str(cell.value).lower() == 'submit':
+                if str(cell.value).lower() == 'try':
                     to_submit.append(cell.row)
         # list to_submit contains rows of summary file to submit
         print('rows to_submit: ', to_submit)
@@ -703,7 +715,7 @@ def main(course_folder,cursor, cnxn):
         
         for line in to_submit:
             work_with_line_in_structure_lessons(line=line,wb_structure=wb_structure,cursor=cursor,cnxn=cnxn,
-                                                  structure_file=structure_file,course_sheet=sheet,course_path=path, Force_Rewrite= False)
+                                                  structure_file=structure_file,course_sheet=sheet,course_path=path, Force_Rewrite= True)
     else:
         print("No exercise file here. quitting")
         exit() 
