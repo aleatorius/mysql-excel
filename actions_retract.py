@@ -51,6 +51,7 @@ def remove_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
         print(list, "list")
         
         if list:
+            sqlcommand_delete = 'DELETE FROM [CalstContent].[dbo].[WrapperExercises]'
             sqlcommand = 'DELETE FROM [CalstContent].[dbo].[WrapperExercises]'
             count = 0
             for id in columns[names.index('WrapperExercises')]:
@@ -76,11 +77,13 @@ def remove_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
                     pass
                 count = count + 1
             print(sqlcommand)
-            exit()
-            cursor.execute(sqlcommand)
-            cnxn.commit()
-            Edit_Excel = True
-                
+            if sqlcommand == sqlcommand_delete:
+                pass
+            else:
+                cursor.execute(sqlcommand)
+                cnxn.commit()
+                Edit_Excel = True
+                    
         else:
             pass
             
