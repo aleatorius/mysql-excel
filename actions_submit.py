@@ -289,6 +289,8 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[table_name_number]
     print(entry_styles, "here")
+    print(entry)
+    
     isnone = False
     if all_equal(entry):
         if entry[0] == None:
@@ -298,6 +300,7 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
     else:
         pass
     print(isnone)   
+    
     if isnone == False:
         
         Edit_Excel = False
@@ -335,8 +338,11 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
                     pass
                 count = count + 1
             print(sqlcommand)
+            
             cursor.execute(sqlcommand)
             list = cursor.fetchall()
+            print(list)
+            
             if not list:
                 Create_Entry = True 
                 Edit_Excel = True
@@ -459,7 +465,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     exercise_file = exercise_path/'exercise.xlsx'
     sounds_folder = exercise_path/'sound_files'
     dst_path = Path(r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent\Italian\OriginalWords_Wav')
-    if sounds_folder.exists:
+    if sounds_folder.exists():
         for filename in os.listdir(str(sounds_folder)):
             print(filename)
             sound_file =  sounds_folder/filename
@@ -514,7 +520,10 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     mp = []
     case_nw = False
     nw = []
+    print(wb_exercise.sheetnames)
+    
     for sheetname in wb_exercise.sheetnames:
+        print(sheetname)
         if 'Vocab' in  sheetname:
             case_vocab = True
             vocab.append(sheetname)
@@ -522,12 +531,15 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             #work on Vocab-Confusion Box
             case_mp = True
             mp.append(sheetname)
-        elif 'Nonword' in sheetname:
+        elif 'NonWords' in sheetname:
             case_nw = True
             nw.append(sheetname)
         else:
             pass
-
+    print(nw)
+    print(case_nw)
+    
+    
     if case_vocab:
         #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
         # was introduced
@@ -683,15 +695,355 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                                         sheet=sheet_wp,row=row,table_name_number=i)
                 print(entry_prop, entry_prop_columns)
             
-    elif case_mp:
+    if case_mp:
+        
         print(mp)
-    elif case_nw:
-        print(nw)
+        
+        #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
+        # was introduced
+        first_run = True
+        Force_Rewrite = False
+        
+        max_info = []
+        sheets = mp
+        #this checks whether all sheets have the same number of lines as it should be. Consistency check.
+        for sheet_name in sheets:
+            sheet = wb_exercise[sheet_name]
+            max_info.append(sheet.max_row)
+        print(max_info)
+        
+        isequal = all_equal(max_info)
+        if isequal:
+            maximum_row = max_info[0]
+        else:
+            print('something wrong with number of rows, terminating')
+            exit()
+        
+        #info lines are 2 rows now, but I keep the possibility that we may have more, that's why I use data_row which is always three as a parameter, 
+        # for future changes
+        data_row = 3
+        #sheet names for word properties and confusion box, to be used next steps
+        sheet_name = [s for s in sheets if 'Confusion' in s][0]
+        print(sheet_name)
+        
+        sheet = wb_exercise[sheet_name]
+        names,columns,ranges = get_sheet_structure(sheet = sheet)
+
+        sheet_name = [s for s in sheets if 'Words Properties' in s][0]
+        print(sheet_name)
+        
+        sheet_wp = wb_exercise[sheet_name]
+        names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
+        
+        min_col, min_row, max_col, max_row = ranges_wp[names_wp.index('Words')]
+        for row in range(3,sheet_wp.max_row+1):
+            cell = sheet_wp.cell(row=row,column=min_col+columns_wp[names_wp.index('Words')].index('Text'))
+            if cell.value == None:
+                break
+                
+        
+        max_word = row
+        print(max_word, maximum_row)
+        if maximum_row != max_word:
+            maximum_row = max_word
+        
+        print(maximum_row)
+        
+        
+        for row in range(data_row,maximum_row+1):
+            
+            #start with confusionbox,
+            # this will either create a new confusionbox id or just replace current entry with the same confusionbox id details, 
+            # just one entry for all the lines in case of vocab 
+               
+            if first_run == True:
+                print(first_run)
+                
+                first_run = False
+                #it checks and possibly creates an entry in the db, excel file is getting modified as well, if db is updated. 
+                # make sure an excel file is closed. 
+                entry_cb,entry_cb_columns  = work_on_entry(wb=wb_exercise,table_name='ConfusionBoxes',
+                                        input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet,row=row, table_name_number=0) 
+                print(entry_cb)
+                                   
+            else:
+                
+                entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
+                print(entry)
+                if entry != entry_cb:                          
+                    replace_entry(sheet=sheet,entry=entry_cb,entry_range=entry_range)
+                    wb_exercise.save(str(exercise_file))
+                first_run = True   
+                print(first_run, entry)
+                
+
+
+            #words, either creates a new entry, or leave as it is, depending on Force_Rewrite value            
+            entry_word, entry_word_columns = work_on_entry(table_name='Words', wb=wb_exercise,
+                                        input_col=False, input_to_local_col=False, modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet,row=row,table_name_number=0) 
+            
+            
+            
+            #transcriptions
+            #for Spanish, Greak and Italian there are 2 speakers and thus two transcriptions fileds, but for Norwegian there could be mulriple, 
+            # which looks wrong a bit
+            c = Counter(names)
+            print(c['Transcriptions'])
+            
+            for num in range(c['Transcriptions']):
+                #transcription, wordid and id columns
+                entry_trans, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
+                                            input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
+                                            modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet,row=row,table_name_number=num)
+                print(entry_trans, entry_trans_columns) 
+                if num == 0:
+                    print(num, "here")
+                    #transcriptionconfusionboxes binds two Speakers with a confusionbox id, via just one transcription id
+                    print(entry_cb, entry_trans, "here we are")
+                    try:
+                        entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                                            input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
+                                            input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
+                                            Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet,row=row)
+                    except:
+                        pass
+                    print(entry_cb_trans, entry_cb_trans_columns)
+                    
+                else:
+                    pass
+                #here we go to speaker transciptrion sheets, where sound files for speakers are specified
+                sheet_name = [s for s in sheets if 'Speaker_Trans_'+str(num) in s][0]
+                sheet_st = wb_exercise[sheet_name]
+                names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
+                #words and transcription are borrowed from previous confusionbox sheet
+                entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Words', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                print(entry, entry_word)
+                
+                if entry != entry_word:                          
+                    replace_entry(sheet=sheet_st,entry=entry_word,entry_range=entry_range)
+                    wb_exercise.save(str(exercise_file))
+
+                entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Transcriptions', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                print(entry, entry_trans)
+                
+                
+                if entry != entry_trans:                          
+                    replace_entry(sheet=sheet_st,entry=entry_trans,entry_range=entry_range)
+                    wb_exercise.save(str(exercise_file))
+                
+                #can be several sound files per word, so here we iterate over all occurances
+                c_pron = Counter(names_st)
+                for pron_num in range(c_pron['Pronunciations']):
+                    print(pron_num)
+                    #transcription id and id should be correct, they are checked, and be either replaced or not,
+                    #  depends on existence and Force_rewrite
+                    entry_pron, entry_pron_columns = work_on_entry(table_name='Pronunciations', wb=wb_exercise,
+                                            input_col=entry_trans[entry_trans_columns.index('Id')], input_to_local_col='Transcription_Id', 
+                                            modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet_st,row=row,table_name_number=pron_num) 
+            
+            #the next sheet, Words, where we specify properties of words, normally it is translations and pictures, if any
+
+            #words entry is borrowed from a confusionbox sheet
+            entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[0]
+            if entry != entry_word:  
+                print(entry, entry_word)                        
+                replace_entry(sheet=sheet_wp,entry=entry_word,entry_range=entry_range)
+                wb_exercise.save(str(exercise_file))
+            
+            c = Counter(names_wp)
+            print(c['Properties'], "here")
+            #can be more than 1 properties, iterate
+            
+            for i in range(c['Properties']):
+                print(i,"here")
+                entry_prop, entry_prop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
+                                        input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet_wp,row=row,table_name_number=i)
+                print(entry_prop, entry_prop_columns, "here last last")
+                
+
+    if case_nw:
+        print(nw, "here")
+        
+        #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
+        # was introduced
+        first_run = True
+        Force_Rewrite = False
+        
+        max_info = []
+        sheets = nw
+        #this checks whether all sheets have the same number of lines as it should be. Consistency check.
+        for sheet_name in sheets:
+            sheet = wb_exercise[sheet_name]
+            max_info.append(sheet.max_row)
+        print(max_info)
+        
+        isequal = all_equal(max_info)
+        if isequal:
+            maximum_row = max_info[0]
+        else:
+            print('something wrong with number of rows, terminating')
+            exit()
+        
+        #info lines are 2 rows now, but I keep the possibility that we may have more, that's why I use data_row which is always three as a parameter, 
+        # for future changes
+        data_row = 3
+        #sheet names for word properties and confusion box, to be used next steps
+        sheet_name = [s for s in sheets if 'Confusion' in s][0]
+        print(sheet_name)
+        
+        sheet = wb_exercise[sheet_name]
+        names,columns,ranges = get_sheet_structure(sheet = sheet)
+
+        sheet_name = [s for s in sheets if 'Words Properties' in s][0]
+        print(sheet_name)
+        
+        sheet_wp = wb_exercise[sheet_name]
+        names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
+        
+        min_col, min_row, max_col, max_row = ranges_wp[names_wp.index('Words')]
+        for row in range(3,sheet_wp.max_row+1):
+            cell = sheet_wp.cell(row=row,column=min_col+columns_wp[names_wp.index('Words')].index('Text'))
+            if cell.value == None:
+                break
+                
+        
+        max_word = row
+        print(max_word, maximum_row)
+        if maximum_row != max_word:
+            maximum_row = max_word
+        
+        print(maximum_row)
+        
+        
+        for row in range(data_row,maximum_row+1):
+            
+            #start with confusionbox,
+               
+            
+            #it checks and possibly creates an entry in the db, excel file is getting modified as well, if db is updated. 
+            # make sure an excel file is closed. 
+            entry_cb,entry_cb_columns  = work_on_entry(wb=wb_exercise,table_name='ConfusionBoxes',
+                                    input_col=Exercise_Id ,input_to_local_col='ExerciseId',modify_col='Id',
+                                    Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                    sheet=sheet,row=row, table_name_number=0) 
+            print(entry_cb)
+                             
+            
+            #words, either creates a new entry, or leave as it is, depending on Force_Rewrite value            
+            entry_word, entry_word_columns = work_on_entry(table_name='Words', wb=wb_exercise,
+                                        input_col=False, input_to_local_col=False, modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet,row=row,table_name_number=0) 
+            
+            #properties
+            print(entry_cb[0], entry_cb_columns)
+            
+            entry_nwprop, entry_nwprop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
+                                        input_col=entry_cb[entry_cb_columns.index('Id')], input_to_local_col='Description', modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet,row=row,table_name_number=0) 
+            
+            
+            #transcriptions
+            #for Spanish, Greak and Italian there are 2 speakers and thus two transcriptions fileds, but for Norwegian there could be mulriple, 
+            # which looks wrong a bit
+            c = Counter(names)
+            print(c['Transcriptions'])
+            
+            for num in range(c['Transcriptions']):
+                #transcription, wordid and id columns
+                entry_trans, entry_trans_columns = work_on_entry(table_name='Transcriptions', wb=wb_exercise,
+                                            input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
+                                            modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet,row=row,table_name_number=num)
+                print(entry_trans, entry_trans_columns) 
+                if num == 0:
+                    print(num, "here")
+                    #transcriptionconfusionboxes binds two Speakers with a confusionbox id, via just one transcription id
+                    print(entry_cb, entry_trans, "here we are")
+                    try:
+                        entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                                            input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
+                                            input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
+                                            Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet,row=row)
+                    except:
+                        pass
+                    print(entry_cb_trans, entry_cb_trans_columns)
+                    
+                else:
+                    pass
+
+
+
+
+                #here we go to speaker transciptrion sheets, where sound files for speakers are specified
+                sheet_name = [s for s in sheets if 'Speaker_Trans_'+str(num) in s][0]
+                sheet_st = wb_exercise[sheet_name]
+                names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
+                #words and transcription are borrowed from previous confusionbox sheet
+                entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Words', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                print(entry, entry_word)
+                
+                if entry != entry_word:                          
+                    replace_entry(sheet=sheet_st,entry=entry_word,entry_range=entry_range)
+                    wb_exercise.save(str(exercise_file))
+
+                entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Transcriptions', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[0]
+                print(entry, entry_trans)
+                
+                
+                if entry != entry_trans:                          
+                    replace_entry(sheet=sheet_st,entry=entry_trans,entry_range=entry_range)
+                    wb_exercise.save(str(exercise_file))
+                
+                #can be several sound files per word, so here we iterate over all occurances
+                c_pron = Counter(names_st)
+                for pron_num in range(c_pron['Pronunciations']):
+                    print(pron_num)
+                    #transcription id and id should be correct, they are checked, and be either replaced or not,
+                    #  depends on existence and Force_rewrite
+                    entry_pron, entry_pron_columns = work_on_entry(table_name='Pronunciations', wb=wb_exercise,
+                                            input_col=entry_trans[entry_trans_columns.index('Id')], input_to_local_col='Transcription_Id', 
+                                            modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet_st,row=row,table_name_number=pron_num) 
+            
+            #the next sheet, Words, where we specify properties of words, normally it is translations and pictures, if any
+
+            #words entry is borrowed from a confusionbox sheet
+            entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[0]
+            if entry != entry_word:  
+                print(entry, entry_word)                        
+                replace_entry(sheet=sheet_wp,entry=entry_word,entry_range=entry_range)
+                wb_exercise.save(str(exercise_file))
+            
+            c = Counter(names_wp)
+            print(c['Properties'], "here")
+            #can be more than 1 properties, iterate
+            
+            for i in range(c['Properties']):
+                print(i,"here")
+                entry_prop, entry_prop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
+                                        input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', modify_col='Id',
+                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                        sheet=sheet_wp,row=row,table_name_number=i)
+                print(entry_prop, entry_prop_columns)
+            
+
     else:
         pass
 
                
-def main(course_folder,cursor, cnxn):
+def main(course_folder,cursor, cnxn, keyword):
     path = Path(course_folder)
     #the path to the course summary file
     structure_file  = Path(course_folder+'\\lessons_structure.xlsx')
@@ -707,7 +1059,7 @@ def main(course_folder,cursor, cnxn):
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
                 print(str(cell.value).lower())
-                if str(cell.value).lower() == 'try':
+                if str(cell.value).lower() == keyword:
                     to_submit.append(cell.row)
         # list to_submit contains rows of summary file to submit
         print('rows to_submit: ', to_submit)
@@ -730,8 +1082,11 @@ if __name__ == "__main__":
     #connect to the calst database
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
+    language='Spanish'
+    keyword = 'test'
     #folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
-    folder = 'G:\\My Drive\\CALST_courses\\Italian_course_styled\\'
-    main(course_folder=folder, cursor=cursor, cnxn=cnxn)
+    #folder = 'G:\\My Drive\\CALST_courses\\'+str(language)+'_course_styled\\'
+    folder = 'C:\\Source\\Repos\\mysql-excel\\'+str(language)+'_course_styled\\'
+    main(course_folder=folder, cursor=cursor, cnxn=cnxn, keyword=keyword)
     cnxn.commit()
     cnxn.close()
