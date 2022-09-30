@@ -288,9 +288,7 @@ def replace_entry(sheet,entry, entry_range):
 def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row, table_name_number):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[table_name_number]
-    print(entry_styles, "here")
-    print(entry)
-    
+
     isnone = False
     if all_equal(entry):
         if entry[0] == None:
@@ -299,7 +297,7 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
             pass
     else:
         pass
-    print(isnone)   
+ 
     
     if isnone == False:
         
@@ -355,9 +353,19 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
         if Create_Entry:
             Edit_Excel = True
             sqlcommand = 'SELECT MAX('+modify_col+') AS maximum FROM '+ table_name
-
+            print(sqlcommand)
             cursor.execute(sqlcommand)
+            print(entry, "inside create entry")
             modify = cursor.fetchall()[0][0]+1
+            if table_name == 'ConfusionBoxes':
+                sqlcommand = 'SELECT MAX(ConfusionBox_Id) AS maximum FROM [CalstContent].[dbo].[TranscriptionConfusionBoxes]'
+                cursor.execute(sqlcommand)
+                max_cb_id = cursor.fetchall()[0][0]+1
+                print(modify, max_cb_id)
+                if max_cb_id > modify:
+                    modify = max_cb_id
+                
+            print(modify, "modify")
             entry[entry_columns.index(modify_col)] = modify
             sqlcommand_insert = 'INSERT INTO [dbo].['+table_name+'] VALUES('
             count = 0
@@ -369,6 +377,8 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
                 count = count + 1
             sqlcommand_insert = sqlcommand_insert+')'
             cursor.execute(sqlcommand_insert,entry)
+            print(sqlcommand_insert, entry)
+            
             cnxn.commit()
         else:
             print('db entry exists')
@@ -380,6 +390,8 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
             print('No edits to Excel')
     else:
         pass
+    
+        
     return entry, entry_columns
 
 def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row):
@@ -441,6 +453,9 @@ def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, 
         wb.save(str(exercise_file))    
     else:
         print('No edits to Excel')
+    
+        
+  
     return entry, entry_columns
 
 def work_with_line_in_structure_lessons(line, wb_structure, structure_file, course_sheet, course_path, Force_Rewrite, cursor, cnxn):
@@ -514,6 +529,19 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     #next sheet, confusionbox, but we may have vocab confusion box, MP, Nonword, they have different structure, 
     # vocab has one confusionbox id for all words in an exercise, MP - 1 per 2 words, etc
     
+    #remove confusionboxes associated with exerciseif if eny
+    sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[ConfusionBoxes] where ExerciseId = ' + str(Exercise_Id)
+    print(sqlcommand)
+    cursor.execute(sqlcommand)
+    list = cursor.fetchall()
+    print(list)
+    if list:
+        sqlcommand = 'DELETE FROM [CalstContent].[dbo].[ConfusionBoxes] where ExerciseId = ' + str(Exercise_Id)
+        cursor.execute(sqlcommand)
+        cnxn.commit()
+    else:
+        pass
+
     case_vocab = False
     vocab = []
     case_mp = False
@@ -536,8 +564,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             nw.append(sheetname)
         else:
             pass
-    print(nw)
-    print(case_nw)
+  
     
     
     if case_vocab:
@@ -631,14 +658,14 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                     print(num, "here")
                     #transcriptionconfusionboxes binds two Speakers with a confusionbox id, via just one transcription id
                     print(entry_cb, entry_trans, "here we are")
-                    try:
-                        entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                    
+                    entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
                                             input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
                                             input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
                                             Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                             sheet=sheet,row=row)
-                    except:
-                        pass
+                    
+                
                     print(entry_cb_trans, entry_cb_trans_columns)
                     
                 else:
@@ -702,7 +729,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
         # was introduced
         first_run = True
-        Force_Rewrite = False
+        Force_Rewrite = True
         
         max_info = []
         sheets = mp
@@ -710,7 +737,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         for sheet_name in sheets:
             sheet = wb_exercise[sheet_name]
             max_info.append(sheet.max_row)
-        print(max_info)
+      
         
         isequal = all_equal(max_info)
         if isequal:
@@ -724,13 +751,13 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         data_row = 3
         #sheet names for word properties and confusion box, to be used next steps
         sheet_name = [s for s in sheets if 'Confusion' in s][0]
-        print(sheet_name)
+      
         
         sheet = wb_exercise[sheet_name]
         names,columns,ranges = get_sheet_structure(sheet = sheet)
 
         sheet_name = [s for s in sheets if 'Words Properties' in s][0]
-        print(sheet_name)
+     
         
         sheet_wp = wb_exercise[sheet_name]
         names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
@@ -743,11 +770,11 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                 
         
         max_word = row
-        print(max_word, maximum_row)
+       
         if maximum_row != max_word:
             maximum_row = max_word
         
-        print(maximum_row)
+       
         
         
         for row in range(data_row,maximum_row+1):
@@ -757,7 +784,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             # just one entry for all the lines in case of vocab 
                
             if first_run == True:
-                print(first_run)
+                
                 
                 first_run = False
                 #it checks and possibly creates an entry in the db, excel file is getting modified as well, if db is updated. 
@@ -771,12 +798,12 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             else:
                 
                 entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[0]
-                print(entry)
+               
                 if entry != entry_cb:                          
                     replace_entry(sheet=sheet,entry=entry_cb,entry_range=entry_range)
                     wb_exercise.save(str(exercise_file))
                 first_run = True   
-                print(first_run, entry)
+                
                 
 
 
@@ -800,19 +827,19 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                                             input_col=entry_word[entry_word_columns.index('Id')], input_to_local_col='WordId', 
                                             modify_col='Id',Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                             sheet=sheet,row=row,table_name_number=num)
-                print(entry_trans, entry_trans_columns) 
+                #print(entry_trans, entry_trans_columns) 
                 if num == 0:
                     print(num, "here")
                     #transcriptionconfusionboxes binds two Speakers with a confusionbox id, via just one transcription id
                     print(entry_cb, entry_trans, "here we are")
-                    try:
-                        entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                    
+                    entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
                                             input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
                                             input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
                                             Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                             sheet=sheet,row=row)
-                    except:
-                        pass
+                    
+                
                     print(entry_cb_trans, entry_cb_trans_columns)
                     
                 else:
@@ -876,7 +903,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
         # was introduced
         first_run = True
-        Force_Rewrite = False
+        Force_Rewrite = True
         
         max_info = []
         sheets = nw
@@ -948,7 +975,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             print(entry_cb[0], entry_cb_columns)
             
             entry_nwprop, entry_nwprop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
-                                        input_col=entry_cb[entry_cb_columns.index('Id')], input_to_local_col='Description', modify_col='Id',
+                                        input_col=str(entry_cb[entry_cb_columns.index('Id')]), input_to_local_col='Description', modify_col='Id',
                                         Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                         sheet=sheet,row=row,table_name_number=0) 
             
@@ -970,14 +997,14 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
                     print(num, "here")
                     #transcriptionconfusionboxes binds two Speakers with a confusionbox id, via just one transcription id
                     print(entry_cb, entry_trans, "here we are")
-                    try:
-                        entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
+                    
+                    entry_cb_trans, entry_cb_trans_columns = work_on_entry_with_no_id(table_name='TranscriptionConfusionBoxes', wb=wb_exercise,
                                             input_cols=[entry_trans[entry_trans_columns.index('Id')],entry_cb[entry_cb_columns.index('Id')]], 
                                             input_to_local_cols=['Transcription_Id','ConfusionBox_Id'], 
-                                            Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            Create_Entry=True,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                             sheet=sheet,row=row)
-                    except:
-                        pass
+                    
+                
                     print(entry_cb_trans, entry_cb_trans_columns)
                     
                 else:
@@ -1067,7 +1094,7 @@ def main(course_folder,cursor, cnxn, keyword):
         
         for line in to_submit:
             work_with_line_in_structure_lessons(line=line,wb_structure=wb_structure,cursor=cursor,cnxn=cnxn,
-                                                  structure_file=structure_file,course_sheet=sheet,course_path=path, Force_Rewrite= True)
+                                                  structure_file=structure_file,course_sheet=sheet,course_path=path, Force_Rewrite=True)
     else:
         print("No exercise file here. quitting")
         exit() 
