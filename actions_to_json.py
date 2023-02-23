@@ -29,296 +29,6 @@ def get_column(sheet, row, name):
         print('Warning! Several cols with name '+name+ ' exiting')
         exit()
 
-def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
-    #it checks wrapper and wrappereercise for id and wrapper_id and for exercise_id
-    sheet = wb_s['Lessons']
-    names,columns,ranges = get_sheet_structure(sheet = sheet)
-    min_col, min_row,max_col,max_row=ranges[names.index('WrapperExercises')]
-    Create_Entry = False
-    Edit_Excel = False
-    data = []
-    coord = []
-    ids = columns[names.index('WrapperExercises')]
-    for cells in sheet.iter_cols(min_col=min_col,min_row=row, max_col=max_col, max_row=row):
-        for cell in cells:
-            data.append(cell.value)
-            coord.append((cell.row,cell.column))
-    print("excel data: ",data, ids, coord)
-    
-    min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
-    for cells in sheet.iter_cols(min_col=min_col,min_row=2, max_col=max_col, max_row=2):
-        for cell in cells:
-            if cell.value == 'Id':
-                Wrapper_Id_column = cell.column
-                
-    min_col, min_row,max_col,max_row=ranges[names.index('Level names')]
-    level = []
-    for cells in sheet.iter_cols(min_col=min_col,min_row=row, max_col=max_col, max_row=row):
-        for cell in cells:
-            level.append(cell.value)
-    print(level)
-    
-    level_name = next(item for item in level if item is not None)
-    print(level.index(level_name))
-    
-    finished = False
-    level_row = row
-    ladder = []
-    ladder_val = 1
-    ladder_bottom = []
-    while not level_row == 3:
-        level_row = level_row - 1
-        if sheet.cell(row=level_row,column=min_col + level.index(level_name)-ladder_val).value:
-            parent = sheet.cell(row=level_row,column=min_col + level.index(level_name)-ladder_val).value
-            #if sheet.cell(row=level_row,column=Wrapper_Id_column).value:
-            ladder.append((parent,level_row))
-            #else:
-            #    ladder.append((parent,level_row))
-            ladder_val = ladder_val + 1
-                
-            #    pass
-    print(ladder)
-    
-    #check ladder
-    #check entry point
-    min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
-    entry = []
-    for cells in sheet.iter_cols(min_col=min_col,min_row=ladder[-1][-1], max_col=max_col, max_row=ladder[-1][-1]):
-        for cell in cells:
-            entry.append(cell.value)
-    print(entry)
-    sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Wrappers]'
-    where_match = True
-    print(columns[names.index('Wrappers')])
-    
-    
-    for id in columns[names.index('Wrappers')]:
-        print(id)
-        cell_value = entry[columns[names.index('Wrappers')].index(id)]
-        print(cell_value)
-        if cell_value == True:
-            cell_value = 1
-        elif cell_value == False:
-            cell_value = 0
-        else:
-            pass
-        if cell_value != None:
-            if isinstance(cell_value, str):
-                string = '\''+str(cell_value)+'\''
-            else:
-                string = str(cell_value)
-            if where_match == True:
-                sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
-                where_match = False
-            else: 
-                sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
-        else:
-            pass
-        
-    print(sqlcommand)
-    
-    cursor.execute(sqlcommand)
-    list = cursor.fetchall()
-    print(list)
-    
-    if list:
-        pass
-    else:
-        if entry[columns[names.index('Wrappers')].index('Id')] == None or entry[columns[names.index('Wrappers')].index('Name')] == None or  entry[columns[names.index('Wrappers')].index('Level')] or entry[columns[names.index('Wrappers')].index('RelatedLanguage_Id')] == None:
-            print("no entry point info, create")
-        else:
-            pass
-
-        if entry[columns[names.index('Wrappers')].index('Name')] == None or  entry[columns[names.index('Wrappers')].index('Level')] or entry[columns[names.index('Wrappers')].index('RelatedLanguage_Id')] == None:
-            print("not enough info to create the entry point. quitting")
-            exit()
-        else:
-            sqlcommand = 'SELECT MAX(Id) AS maximum FROM Wrappers'
-
-            cursor.execute(sqlcommand)
-            grandpa = cursor.fetchall()[0][0]+1
-            entry[columns[names.index('Wrappers')].index('Id')] = grandpa
-            sqlcommand_insert = 'INSERT INTO [dbo].[Wrappers] VALUES('
-            count = 0
-            for id in columns[names.index('Wrappers')]:
-                if count == 0:
-                    sqlcommand_insert = sqlcommand_insert+'?'
-                else:
-                    sqlcommand_insert = sqlcommand_insert+',?'
-                count = count + 1
-            sqlcommand_insert = sqlcommand_insert+')'
-            print(sqlcommand_insert,entry)
-        
-            cursor.execute(sqlcommand_insert,entry)
-            cnxn.commit()
-
-            min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
-            print(min_col, min_row,max_col,max_row)
-            count = 0
-            for col in range(min_col,max_col+1):
-                sheet.cell(row = ladder[-1][-1], column = col).value = entry[count]
-                print(count, sheet.cell(row = ladder[-1][-1], column = col).value)
-                count = count + 1
-            wb_s.save(structure_file)
-
-
-
-    
-
-
-
-        
-
-    
-    grandpa = int(sheet.cell(row=ladder[-1][-1],column=Wrapper_Id_column).value)
-    print(grandpa)
-    
-    for lad in ladder[:-1][::-1]:
-        print(lad)
-        
-        min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
-        entry = []
-        for cells in sheet.iter_cols(min_col=min_col,min_row=lad[-1], max_col=max_col, max_row=lad[-1]):
-            for cell in cells:
-                entry.append(cell.value)
-        if entry[columns[names.index('Wrappers')].index('WrapperId')] != grandpa:
-            print("oops")
-            entry[columns[names.index('Wrappers')].index('WrapperId')] = grandpa
-            Create_Entry = True
-            #sheet.cell(row=lad[-1], column = min_col + columns[names.index('Wrappers')].index('WrapperId')+1).value)
-        else:
-            pass
-        if entry[columns[names.index('Wrappers')].index('Id')] == None:
-            Create_Entry = True
-        else:
-            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Wrappers]'
-            count = 0
-            for id in columns[names.index('Wrappers')]:
-                print(id)
-                cell_value = entry[columns[names.index('Wrappers')].index(id)]
-                print(cell_value)
-                if cell_value == True:
-                    cell_value = 1
-                elif cell_value == False:
-                    cell_value = 0
-                else:
-                    pass
-                if cell_value != None:
-                    if isinstance(cell_value, str):
-                        string = '\''+str(cell_value)+'\''
-                    else:
-                        string = str(cell_value)
-                    if count == 0:
-                        sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
-                    else: 
-                        if id != 'Name':
-                            sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
-                        else:
-                            pass
-                else:
-                    pass
-                count = count + 1
-            print(sqlcommand)
-            
-            cursor.execute(sqlcommand)
-            list = cursor.fetchall()
-            if list:
-                pass
-            else:
-                Create_Entry= True
-            
-            
-        
-
-        print(Create_Entry)
-        
-        if Create_Entry == True:
-            sqlcommand = 'SELECT MAX(Id) AS maximum FROM Wrappers'
-
-            cursor.execute(sqlcommand)
-            grandpa = cursor.fetchall()[0][0]+1
-            entry[columns[names.index('Wrappers')].index('Id')] = grandpa
-            sqlcommand_insert = 'INSERT INTO [dbo].[Wrappers] VALUES('
-            count = 0
-            for id in columns[names.index('Wrappers')]:
-                if count == 0:
-                    sqlcommand_insert = sqlcommand_insert+'?'
-                else:
-                    sqlcommand_insert = sqlcommand_insert+',?'
-                count = count + 1
-            sqlcommand_insert = sqlcommand_insert+')'
-            print(sqlcommand_insert)
-            Edit_Excel = True
-            cursor.execute(sqlcommand_insert,entry)
-            cnxn.commit()
-        else:
-            grandpa = entry[columns[names.index('Wrappers')].index('Id')]
-        if Edit_Excel:
-            min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
-            print(min_col, min_row,max_col,max_row)
-            count = 0
-            for col in range(min_col,max_col+1):
-                sheet.cell(row = lad[-1], column = col).value = entry[count]
-                print(count, sheet.cell(row = lad[-1], column = col).value)
-                count = count + 1
-            wb_s.save(structure_file)
-            
-        else:
-            print('No edits to Excel')
-        
-    #compare wrapper id of an exercise with id of its parent folder from Wrappers columns    
-    
-    Create_Entry = False
-
-    min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
-    #search for parent wrapper id scrolling upward
-    finished = False
-    wrapper_id_row = row
-    while not finished:
-        wrapper_id_row = wrapper_id_row - 1
-        print(sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value)
-        if sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value:
-            finished = True
-            Wrapper_Id = sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value
-            if not Wrapper_Id:
-                pass
-    print(Wrapper_Id, data[ids.index('Wrapper_Id')])
-    
-    #check where whrapper_id coincides with wrapper id, if not, replace with parents id
-    if data[ids.index('Wrapper_Id')] == Wrapper_Id:
-        pass
-    else:
-        sheet.cell(row=coord[ids.index('Wrapper_Id')][0], column=coord[ids.index('Wrapper_Id')][1]).value=Wrapper_Id
-    #check if it has an exercise id 
-    Create_Entry = False
-    if data[ids.index('Exercise_Id')]:
-        print('already exists the entry in the excel file, checking for existance in the database')
-        sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[WrapperExercises] where Exercise_Id = ' + str(data[ids.index('Exercise_Id')]) + ' AND Wrapper_Id = '+str(Wrapper_Id)
-        cursor.execute(sqlcommand)
-        list = cursor.fetchall()
-        if not list:
-            Create_Entry = True
-        else:
-            print('db entry exists')
-            Exercise_Id = data[ids.index('Exercise_Id')]
-    else:
-        Create_Entry = True
-
-    if Create_Entry == True:
-        print('creating an entry')
-        cursor.execute('SELECT MAX(Id) AS maximum FROM Exercises')
-        Exercise_Id = cursor.fetchall()[0][0]+1
-        sqlcommand = 'INSERT INTO [dbo].[WrapperExercises] ([Wrapper_Id],[Exercise_Id]) VALUES '
-        list = sqlcommand.split()[3].split(',')
-        values = sqlcommand.split()[3].replace('[Wrapper_Id]',str(Wrapper_Id)).replace('[Exercise_Id]',str(Exercise_Id))
-        sqlcommand = sqlcommand + values
-        cursor.execute(sqlcommand)
-        sheet.cell(row=coord[ids.index('Exercise_Id')][0], column=coord[ids.index('Exercise_Id')][1]).value = Exercise_Id
-        
-    else:
-        pass
-    return Create_Entry,[Wrapper_Id,Exercise_Id]
-
 def indices(lst, item):
     return [i for i, x in enumerate(lst) if x == item]
 
@@ -337,17 +47,8 @@ def get_entry_by_name(sheet, table_name, names, columns,ranges, row):
         entries.append((entry,range,columns[index],styles))
     return entries
 
-def replace_entry(sheet,entry, entry_range):
-    min_col, min_row,max_col,max_row=entry_range
-    index = 0
-    for col in range(min_col,max_col+1):
-        cell = sheet.cell(row=min_row, column=col)
-        cell.value = entry[index]
-        index = index + 1
 
-
-
-def work_with_line_in_structure_lessons(line,course_sheet, course_path):
+def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     path=course_path
     sheet = course_sheet
     folder_col = get_column(sheet=sheet, row=1, name='Folders')
@@ -384,7 +85,8 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
                 dick['Group lesson'] = cell.value
             current_row -= 1
     elif level[-2] != None:
-        dick["Exercise name"] =  level[-2]
+        #dick["Exercise name"] =  level[-2]
+        pass
     else:
         pass
 
@@ -433,6 +135,49 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
                 dick[entry[entry_columns.index('Key')]] = entry[entry_columns.index('Value')]
             if entry[entry_columns.index('Description')]:
                 dick[entry[entry_columns.index('Key')]+'_description'] = entry[entry_columns.index('Description')]
+    try:
+        va = str(dick['MinimalPair_UPSIDSound'])
+        if '/' in va:
+            for lue in va.split('/'):
+                print(lue)
+                sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Sounds] where Id = '+lue
+                cursor.execute(sqlcommand)
+                sound = cursor.fetchall()[0]
+                dick['MinimalPair_UPSIDSound'] = dick['MinimalPair_UPSIDSound'].replace(lue, sound[4])
+                dick['MinimalPair_IPA'] = dick['MinimalPair_UPSIDSound'].replace(sound[4],sound[1])
+
+        else:
+            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Sounds] where Id = '+str(dick['MinimalPair_UPSIDSound'])
+            cursor.execute(sqlcommand)
+            sound = cursor.fetchall()[0]
+            dick['MinimalPair_UPSIDSound'] = sound[4]
+            dick['MinimalPair_IPA'] = sound[1]
+
+        va = str(dick['Second_MinimalPair_UPSIDSound'])
+        if '/' in va:
+            for lue in va.split('/'):
+                print(lue)
+                sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Sounds] where Id = '+lue
+                cursor.execute(sqlcommand)
+                sound = cursor.fetchall()[0]
+                dick['Second_MinimalPair_UPSIDSound'] = dick['Second_MinimalPair_UPSIDSound'].replace(lue, sound[4])
+                dick['Second_MinimalPair_IPA'] = dick['Second_MinimalPair_UPSIDSound'].replace(sound[4],sound[1])
+
+        else:
+            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Sounds] where Id = '+str(dick['Second_MinimalPair_UPSIDSound'])
+            cursor.execute(sqlcommand)
+            sound = cursor.fetchall()[0]
+            dick['Second_MinimalPair_UPSIDSound'] = sound[4]
+            dick['Second_MinimalPair_IPA'] = sound[1]
+
+        
+
+
+        
+    except KeyError:
+        pass
+        
+
     
     case_vocab = False
     vocab = []
@@ -820,7 +565,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
     return(dick)
  
                
-def main(collection_name, course_folder):
+def main(cursor, collection_name, course_folder):
     path = Path(course_folder)
     #the path to the course summary file
     structure_file  = Path(course_folder+'\\lessons_structure.xlsx')
@@ -831,11 +576,11 @@ def main(collection_name, course_folder):
         sheet = wb_structure['Lessons']
         to_submit = []
         print(str(structure_file))
-        action_col = get_column(sheet=sheet, row = 1, name='Comments')
+        action_col = get_column(sheet=sheet, row = 1, name='Actions')
         
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
-                #if str(cell.value).lower() == keyword: #or str(cell.value).lower() == 'submitted' or str(cell.value).lower() == 'retract' or str(cell.value).lower() == 'submitted-nonword' or str(cell.value).lower() == 'failed':
+                #if str(cell.value).lower() == 'retract':
                 if cell.value:
                     to_submit.append(cell.row)
                     print(cell.value)
@@ -848,7 +593,7 @@ def main(collection_name, course_folder):
         for line in to_submit:
             cell_action = sheet.cell(row=line,column=action_col)
             #try:
-            dictionary = work_with_line_in_structure_lessons(line=line,course_sheet=sheet,course_path=path)
+            dictionary = work_with_line_in_structure_lessons(cursor=cursor, line=line,course_sheet=sheet,course_path=path)
        
             
             collection_name.insert_one(dictionary)
@@ -874,7 +619,7 @@ if __name__ == "__main__":
     #connect to the calst database
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
-    language='Greek'
+    language='Italian'
     dbname = get_database('calst_test')
     collection_name = dbname[language]
     output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'
@@ -887,6 +632,6 @@ if __name__ == "__main__":
     #folder = 'C:\\Source\\Repos\\mysql-excel\\'+str(language)+'_course_styled\\'
     folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\\'+str(language)+'_course_styled'
     #folder = r'C:\Users\dmitrysh\OneDrive - NTNU'
-    main(collection_name = collection_name, course_folder=folder)
-    cnxn.commit()
-    cnxn.close()
+    main(cursor=cursor, collection_name = collection_name, course_folder=folder)
+    #cnxn.commit()
+    #cnxn.close()
