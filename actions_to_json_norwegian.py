@@ -528,7 +528,7 @@ def main(cursor, collection_name, course_folder):
             if dictionary['Lesson'] in Lessons:
                 dictionary['Category'] = 'Consonants'
             else:
-                dictionary['Category'] = 'Vowels/Diphtongs'
+                dictionary['Category'] = 'Vowels'
             
             
             if sheet.cell(row=line[-1], column=dialects_key).value:

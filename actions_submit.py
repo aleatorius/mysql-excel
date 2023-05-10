@@ -1,11 +1,15 @@
+from ast import keyword
 from collections import Counter
 from itertools import groupby
 from pathlib import Path
+from unicodedata import name
 from openpyxl import load_workbook
 from diff_folder_and_mysql import get_sheet_structure 
 import pyodbc 
 import os
 import shutil
+
+
 
 def all_equal(iterable):
     g = groupby(iterable)
@@ -38,7 +42,7 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
             data.append(cell.value)
             coord.append((cell.row,cell.column))
     print("excel data: ",data, ids, coord)
-
+    
     min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
     for cells in sheet.iter_cols(min_col=min_col,min_row=2, max_col=max_col, max_row=2):
         for cell in cells:
@@ -54,6 +58,7 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
     
     level_name = next(item for item in level if item is not None)
     print(level.index(level_name))
+    
     finished = False
     level_row = row
     ladder = []
@@ -71,6 +76,7 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
                 
             #    pass
     print(ladder)
+    
     #check ladder
     #check entry point
     min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
@@ -80,7 +86,7 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
             entry.append(cell.value)
     print(entry)
     sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Wrappers]'
-    count = 0
+    where_match = True
     print(columns[names.index('Wrappers')])
     
     
@@ -99,22 +105,66 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
                 string = '\''+str(cell_value)+'\''
             else:
                 string = str(cell_value)
-            if count == 0:
+            if where_match == True:
                 sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
+                where_match = False
             else: 
                 sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
         else:
             pass
-        count = count + 1
+        
     print(sqlcommand)
+    
     cursor.execute(sqlcommand)
     list = cursor.fetchall()
+    print(list)
+    
     if list:
         pass
     else:
         if entry[columns[names.index('Wrappers')].index('Id')] == None or entry[columns[names.index('Wrappers')].index('Name')] == None or  entry[columns[names.index('Wrappers')].index('Level')] or entry[columns[names.index('Wrappers')].index('RelatedLanguage_Id')] == None:
-            print("no entry point info, quitting")
+            print("no entry point info, create")
+        else:
+            pass
+
+        if entry[columns[names.index('Wrappers')].index('Name')] == None or  entry[columns[names.index('Wrappers')].index('Level')] or entry[columns[names.index('Wrappers')].index('RelatedLanguage_Id')] == None:
+            print("not enough info to create the entry point. quitting")
             exit()
+        else:
+            sqlcommand = 'SELECT MAX(Id) AS maximum FROM Wrappers'
+
+            cursor.execute(sqlcommand)
+            grandpa = cursor.fetchall()[0][0]+1
+            entry[columns[names.index('Wrappers')].index('Id')] = grandpa
+            sqlcommand_insert = 'INSERT INTO [dbo].[Wrappers] VALUES('
+            count = 0
+            for id in columns[names.index('Wrappers')]:
+                if count == 0:
+                    sqlcommand_insert = sqlcommand_insert+'?'
+                else:
+                    sqlcommand_insert = sqlcommand_insert+',?'
+                count = count + 1
+            sqlcommand_insert = sqlcommand_insert+')'
+            print(sqlcommand_insert,entry)
+        
+            cursor.execute(sqlcommand_insert,entry)
+            cnxn.commit()
+
+            min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
+            print(min_col, min_row,max_col,max_row)
+            count = 0
+            for col in range(min_col,max_col+1):
+                sheet.cell(row = ladder[-1][-1], column = col).value = entry[count]
+                print(count, sheet.cell(row = ladder[-1][-1], column = col).value)
+                count = count + 1
+            wb_s.save(structure_file)
+
+
+
+    
+
+
+
         
 
     
@@ -122,6 +172,8 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
     print(grandpa)
     
     for lad in ladder[:-1][::-1]:
+        print(lad)
+        
         min_col, min_row,max_col,max_row=ranges[names.index('Wrappers')]
         entry = []
         for cells in sheet.iter_cols(min_col=min_col,min_row=lad[-1], max_col=max_col, max_row=lad[-1]):
@@ -157,12 +209,15 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
                     if count == 0:
                         sqlcommand = sqlcommand + ' WHERE ['+ id + '] = ' + string
                     else: 
-                        sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
+                        if id != 'Name':
+                            sqlcommand = sqlcommand + ' AND ['+ id + '] = ' + string
+                        else:
+                            pass
                 else:
                     pass
                 count = count + 1
             print(sqlcommand)
-           
+            
             cursor.execute(sqlcommand)
             list = cursor.fetchall()
             if list:
@@ -173,6 +228,7 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
             
         
 
+        print(Create_Entry)
         
         if Create_Entry == True:
             sqlcommand = 'SELECT MAX(Id) AS maximum FROM Wrappers'
@@ -218,12 +274,14 @@ def check_exerciseid_in_structure(wb_s,cursor,row,cnxn, structure_file):
     wrapper_id_row = row
     while not finished:
         wrapper_id_row = wrapper_id_row - 1
+        print(sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value)
         if sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value:
             finished = True
             Wrapper_Id = sheet.cell(row=wrapper_id_row,column=Wrapper_Id_column).value
             if not Wrapper_Id:
                 pass
-
+    print(Wrapper_Id, data[ids.index('Wrapper_Id')])
+    
     #check where whrapper_id coincides with wrapper id, if not, replace with parents id
     if data[ids.index('Wrapper_Id')] == Wrapper_Id:
         pass
@@ -288,7 +346,8 @@ def replace_entry(sheet,entry, entry_range):
 def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, cursor, cnxn,exercise_file, sheet, table_name, row, table_name_number):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[table_name_number]
-
+    
+    
     isnone = False
     if all_equal(entry):
         if entry[0] == None:
@@ -298,7 +357,14 @@ def work_on_entry(wb, input_col, input_to_local_col, modify_col, Create_Entry, c
     else:
         pass
  
-    
+    try:
+        if entry[entry_columns.index('Key')] == 'ReverseExercise':
+            isnone = True
+        else:   
+            pass
+    except:
+        pass
+
     if isnone == False:
         
         Edit_Excel = False
@@ -398,8 +464,15 @@ def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, 
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet,table_name=table_name, names=names,ranges=ranges,row=row,columns=columns)[0]
     print(entry,'here we are')
+    isnone = False
+    if all_equal(entry):
+        if entry[0] == None:
+            isnone = True
+        else:
+            pass
+    else:
+        pass
     
-
     Edit_Excel = False
 
     for index,input in enumerate(input_to_local_cols):
@@ -453,15 +526,17 @@ def work_on_entry_with_no_id(wb, input_cols, input_to_local_cols, Create_Entry, 
         wb.save(str(exercise_file))    
     else:
         print('No edits to Excel')
-    
         
   
     return entry, entry_columns
 
-def work_with_line_in_structure_lessons(line, wb_structure, structure_file, course_sheet, course_path, Force_Rewrite, cursor, cnxn):
+def work_with_line_in_structure_lessons(line, wb_structure, structure_file, course_sheet, course_path, Force_Rewrite, cursor, cnxn, dst_path):
     path=course_path
     sheet = course_sheet
     folder_col = get_column(sheet=sheet, row=1, name='Folders')
+    action_col = get_column(sheet=sheet, row=1, name='Actions')
+    cell_action = sheet.cell(row=line,column=action_col)
+    
     #structure file changes
     #check wrapper_id exercise_id info, and replace it if needed
     Create_Entry, [Wrapper_Id, Exercise_Id] = check_exerciseid_in_structure(structure_file = structure_file, cnxn=cnxn, wb_s=wb_structure, cursor=cursor, row=line)
@@ -474,12 +549,13 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     else:
         pass
    
-   
+    
     #open an exercise.xlsx
     exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)))
     exercise_file = exercise_path/'exercise.xlsx'
     sounds_folder = exercise_path/'sound_files'
-    dst_path = Path(r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent\Italian\OriginalWords_Wav')
+    print(exercise_file.exists(), str(exercise_file))
+    
     if sounds_folder.exists():
         for filename in os.listdir(str(sounds_folder)):
             print(filename)
@@ -498,6 +574,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     print(str(exercise_file))
    
     wb_exercise = load_workbook(str(exercise_file))
+
     data_row = 3
     sheet_ex = wb_exercise['Exercise']
     names_ex,columns_ex,ranges_ex = get_sheet_structure(sheet = sheet_ex)
@@ -510,13 +587,17 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         wb_exercise.save(str(exercise_file))
 
     #create if needed an exercise entry in the Exercises database
+   
     entry_ex, entry_ex_columns = work_on_entry_with_no_id(table_name='Exercises', wb=wb_exercise,
                                         input_cols=[Exercise_Id], 
                                         input_to_local_cols=['Id'], 
                                         Create_Entry=False,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
                                         sheet=sheet_ex,row=data_row)
     #there can be more properties entries than 1, so iterate if needed
+ 
     c_prop = Counter(names_ex)
+    print(c_prop)
+    
     for i in range(c_prop['Properties']):
             #it creates an entry with proper exercise id and id if it doesnt exist in db, excel file gets upodated, pay attention, 
             # exercises.xlsx shoul be closed
@@ -548,7 +629,8 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
     mp = []
     case_nw = False
     nw = []
-    print(wb_exercise.sheetnames)
+    print(wb_exercise.sheetnames, "mitya")
+    
     
     for sheetname in wb_exercise.sheetnames:
         print(sheetname)
@@ -565,6 +647,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         else:
             pass
   
+    print(case_mp,case_vocab, case_nw)
     
     
     if case_vocab:
@@ -729,7 +812,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
         # was introduced
         first_run = True
-        Force_Rewrite = True
+        #Force_Rewrite = True
         
         max_info = []
         sheets = mp
@@ -929,7 +1012,8 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         
         sheet = wb_exercise[sheet_name]
         names,columns,ranges = get_sheet_structure(sheet = sheet)
-
+        print(names)
+        
         sheet_name = [s for s in sheets if 'Words Properties' in s][0]
         print(sheet_name)
         
@@ -973,12 +1057,15 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
             
             #properties
             print(entry_cb[0], entry_cb_columns)
+            print(names)
             
-            entry_nwprop, entry_nwprop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
-                                        input_col=str(entry_cb[entry_cb_columns.index('Id')]), input_to_local_col='Description', modify_col='Id',
-                                        Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
-                                        sheet=sheet,row=row,table_name_number=0) 
-            
+            if 'Properties' in names:
+                entry_nwprop, entry_nwprop_columns = work_on_entry(table_name='Properties', wb=wb_exercise,
+                                            input_col=str(entry_cb[entry_cb_columns.index('Id')]), input_to_local_col='Description', modify_col='Id',
+                                            Create_Entry=Force_Rewrite,cursor=cursor,cnxn=cnxn,exercise_file=exercise_file,
+                                            sheet=sheet,row=row,table_name_number=0) 
+            else:
+                pass            
             
             #transcriptions
             #for Spanish, Greak and Italian there are 2 speakers and thus two transcriptions fileds, but for Norwegian there could be mulriple, 
@@ -1070,7 +1157,7 @@ def work_with_line_in_structure_lessons(line, wb_structure, structure_file, cour
         pass
 
                
-def main(course_folder,cursor, cnxn, keyword):
+def main(course_folder,cursor, cnxn, keyword, output_sounds):
     path = Path(course_folder)
     #the path to the course summary file
     structure_file  = Path(course_folder+'\\lessons_structure.xlsx')
@@ -1086,15 +1173,24 @@ def main(course_folder,cursor, cnxn, keyword):
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
                 print(str(cell.value).lower())
-                if str(cell.value).lower() == keyword:
+                if str(cell.value).lower() == keyword: #or str(cell.value).lower() == 'submitted' or str(cell.value).lower() == 'retract' or str(cell.value).lower() == 'submitted-nonword' or str(cell.value).lower() == 'failed':
                     to_submit.append(cell.row)
         # list to_submit contains rows of summary file to submit
         print('rows to_submit: ', to_submit)
         
         
         for line in to_submit:
+            cell_action = sheet.cell(row=line,column=action_col)
+            #try:
             work_with_line_in_structure_lessons(line=line,wb_structure=wb_structure,cursor=cursor,cnxn=cnxn,
-                                                  structure_file=structure_file,course_sheet=sheet,course_path=path, Force_Rewrite=True)
+                                                    structure_file=structure_file,course_sheet=sheet,course_path=path, Force_Rewrite=False, dst_path=output_sounds)
+            cell_action.value = 'submitted'
+            wb_structure.save(structure_file)
+            #except:
+                #cell_action.value = 'failed_submitted'
+                #wb_structure.save(structure_file)  
+                     
+        
     else:
         print("No exercise file here. quitting")
         exit() 
@@ -1110,10 +1206,16 @@ if __name__ == "__main__":
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
     language='Spanish'
-    keyword = 'test'
+    output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'
+    print(output_sound)
+ 
+    keyword = 'retract'	
+    dst_path = Path(output_sound)
     #folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
     #folder = 'G:\\My Drive\\CALST_courses\\'+str(language)+'_course_styled\\'
-    folder = 'C:\\Source\\Repos\\mysql-excel\\'+str(language)+'_course_styled\\'
-    main(course_folder=folder, cursor=cursor, cnxn=cnxn, keyword=keyword)
+    #folder = 'C:\\Source\\Repos\\mysql-excel\\'+str(language)+'_course_styled\\'
+    folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\\'+str(language)+'_course_styled'
+    #folder = r'C:\Users\dmitrysh\OneDrive - NTNU'
+    main(course_folder=folder, cursor=cursor, cnxn=cnxn, keyword=keyword, output_sounds = dst_path)
     cnxn.commit()
     cnxn.close()

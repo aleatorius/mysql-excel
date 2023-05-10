@@ -76,19 +76,32 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     dick['MinimalPair_IPA']=""
     dick['Second_MinimalPair_IPA']=""
     dick['Extra']=[]
-
+    dick['Position']=""
     dick['Type'] =""
     dick['Type_description'] = ""
 
     extra=[]
-    known = ['MinimalPair_UPSIDSound','Second_MinimalPair_UPSIDSound', 'MinimalPair_IPA', 'Second_MinimalPair_IPA','Type',
-             'Type_description','ExerciseName' ]
-
+    known = []
+    titles_replace_key = get_column(sheet=course_sheet, row = 1, name='Titles')
 #    if id !=None:
 #        dick['_id'] = str(id)
-    if level[-1] != None:
+    if level[-1] or sheet.cell(row=line,column=titles_replace_key).value:
+
         print(level[-1]) 
-        dick["Exercise_name"] =  level[-1]
+        print(sheet.cell(row=line,column=titles_replace_key).value)
+        
+        if sheet.cell(row=line,column=titles_replace_key).value:
+            dick["Exercise_name"] =  sheet.cell(row=line,column=titles_replace_key).value
+        else:
+            dick["Exercise_name"] =  level[-1]
+        ipas = dick["Exercise_name"].split()
+        dick['MinimalPair_IPA']=ipas[0] 
+        dick['Second_MinimalPair_IPA']=ipas[2]
+        print(ipas)
+        if len(ipas) == 4:
+            dick['Position'] = ipas[-1]
+        print(dick)
+        
         #find group name in this case
         print(min_col, min_row,max_col,max_row)
         value = False
@@ -131,9 +144,12 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)))
     exercise_file = exercise_path/'exercise.xlsx'
     print(exercise_file.exists(), str(exercise_file))
-    
-    wb_exercise = load_workbook(str(exercise_file))
-
+    try:
+        wb_exercise = load_workbook(str(exercise_file))
+    except:
+        exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)).replace('final', 'finall'))
+        exercise_file = exercise_path/'exercise.xlsx'
+        wb_exercise = load_workbook(str(exercise_file))
     data_row = 3
     sheet_ex = wb_exercise['Exercise']
     names,columns,ranges = get_sheet_structure(sheet = sheet_ex)
@@ -156,46 +172,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
                 extra.append({str(entry[entry_columns.index('Key')]):str(entry[entry_columns.index('Value')]) })
             if entry[entry_columns.index('Description')]:
                 extra.append({str(entry[entry_columns.index('Key')])+'_description':  str(entry_columns.index('Description'))})
-    if dick['MinimalPair_UPSIDSound'] !="":
-        va = str(dick['MinimalPair_UPSIDSound'])
-        
-        if '/' in va:
-            for lue in va.split('/'):
-                print(lue)
-                sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Sounds] where Id = '+lue
-                cursor.execute(sqlcommand)
-                sound = cursor.fetchall()[0]
-                dick['MinimalPair_UPSIDSound'] = dick['MinimalPair_UPSIDSound'].replace(lue, sound[4])
-                dick['MinimalPair_IPA'] = dick['MinimalPair_UPSIDSound'].replace(sound[4],sound[1])
-
-        else:
-            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Sounds] where Id = '+str(dick['MinimalPair_UPSIDSound'])
-            cursor.execute(sqlcommand)
-            sound = cursor.fetchall()[0]
-            dick['MinimalPair_UPSIDSound'] = sound[4]
-            dick['MinimalPair_IPA'] = sound[1]
-    else:
-        pass
-    if dick['Second_MinimalPair_UPSIDSound'] != "":
-        va = str(dick['Second_MinimalPair_UPSIDSound'])
-        if '/' in va:
-            for lue in va.split('/'):
-                print(lue)
-                sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Sounds] where Id = '+lue
-                cursor.execute(sqlcommand)
-                sound = cursor.fetchall()[0]
-                dick['Second_MinimalPair_UPSIDSound'] = dick['Second_MinimalPair_UPSIDSound'].replace(lue, sound[4])
-                dick['Second_MinimalPair_IPA'] = dick['Second_MinimalPair_UPSIDSound'].replace(sound[4],sound[1])
-
-        else:
-            sqlcommand = 'SELECT * FROM [CalstContent].[dbo].[Sounds] where Id = '+str(dick['Second_MinimalPair_UPSIDSound'])
-            cursor.execute(sqlcommand)
-            sound = cursor.fetchall()[0]
-            dick['Second_MinimalPair_UPSIDSound'] = sound[4]
-            dick['Second_MinimalPair_IPA'] = sound[1]
-    else:
-        pass
-    dick['Extra'] = extra
+        dick['Extra'] = extra
 
         
         
@@ -490,7 +467,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
 def main(cursor, collection_name, course_folder):
     path = Path(course_folder)
     #the path to the course summary file
-    structure_file  = Path(course_folder+'\\lessons_structure.xlsx')
+    structure_file  = Path(course_folder+'\\lessons_structure_JK.xlsx')
 
     if structure_file.exists():
         #check actions column for the command "submit"
@@ -498,55 +475,67 @@ def main(cursor, collection_name, course_folder):
         sheet = wb_structure['Lessons']
         to_submit = []
         print(str(structure_file))
-        action_col = get_column(sheet=sheet, row = 2, name='Level 4')
+        action_col = get_column(sheet=sheet, row = 1, name='Actions')
     
     
         key = get_column(sheet=sheet, row = 1, name='Actions')
         print(key, action_col)
-        
+        level_1_key = get_column(sheet=sheet, row = 2, name='Level 1')
+        level_2_key = get_column(sheet=sheet, row = 2, name='Level 2')
+        titles_key = get_column(sheet=sheet, row = 1, name='Titles')
+        level_1 = level_2 = ''
+
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
                 #if str(cell.value).lower() == 'test':
-                if sheet.cell(row=cell.row, column=action_col).value:
+                if sheet.cell(row=cell.row, column=level_1_key).value:
+                    level_1 = sheet.cell(row=cell.row, column=level_1_key).value
+                if sheet.cell(row=cell.row, column=level_2_key).value:
+                    level_2 = sheet.cell(row=cell.row, column=level_2_key).value
+                if ( sheet.cell(row=cell.row, column=key).value == 'submit' or sheet.cell(row=cell.row, column=key).value == 'new' ) and level_1 == 'Beginner':
+                #if sheet.cell(row=cell.row, column=key).value == 'test':
+                    to_submit.append((level_1,level_2, sheet.cell(row=cell.row, column=key).value, sheet.cell(row=cell.row, column=titles_key).value, cell.row ))
                     
-                    to_submit.append(cell.row)
-                    print(cell.value)
         # list to_submit contains rows of summary file to submit
         print('rows to_submit: ', to_submit)
         
         
         
         
+        
         for line in to_submit:
-            cell_action = sheet.cell(row=line,column=key)
+            cell_action = sheet.cell(row=line[-1],column=key)
 
-            try:
-                dictionary = work_with_line_in_structure_lessons(cursor=cursor, line=line,course_sheet=sheet,course_path=path)
-       
+        
+            dictionary = work_with_line_in_structure_lessons(cursor=cursor, line=line[-1],course_sheet=sheet,course_path=path)
+            Lessons = ['Lesson '+str(i) for i in range(1,6) ]
+            if dictionary['Lesson'] in Lessons:
+                dictionary['Category'] = 'Consonants'
+            else:
+                dictionary['Category'] = 'Vowels'
 
+            print(dictionary)
+            cell_action.value = 'submitted'
+            wb_structure.save(structure_file)
+            collection_name.insert_one(dictionary)
+            
+            
+            #for i in dictionary['MP_wordpairs']:
+            #    dialects.append(i[0]['dialect'])
+            #print(dialects)
+            
+            #numbers=[]
+            #for i in audio:
+            #    numbers.append(dialects.count(i))
+            #print(max(numbers), "array size max")
+            #if max(numbers) > 7:
                 
-                collection_name.insert_one(dictionary)
-                cell_action.value = 'submitted'
-                wb_structure.save(structure_file)
-                
-                #for i in dictionary['MP_wordpairs']:
-                #    dialects.append(i[0]['dialect'])
-                #print(dialects)
-                
-                #numbers=[]
-                #for i in audio:
-                #    numbers.append(dialects.count(i))
-                #print(max(numbers), "array size max")
-                #if max(numbers) > 7:
+                #else:
+            #    cell_action.value = 'rejected'
+            
+            
+        
                     
-                    #else:
-                #    cell_action.value = 'rejected'
-                
-                
-            except:
-                cell_action.value = 'failed_submitted'
-                wb_structure.save(structure_file)  
-                     
         
     else:
         print("No exercise file here. quitting")
@@ -563,7 +552,7 @@ if __name__ == "__main__":
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
     language='English'
-    dbname = get_database('calst_test')
+    dbname = get_database('calst_new_test')
     collection_name = dbname[language]
     #collection_name = dbname['italian_test_nonword']
     output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'
@@ -574,9 +563,9 @@ if __name__ == "__main__":
     #folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
     #folder = 'G:\\My Drive\\CALST_courses\\'+str(language)+'_course_styled\\'
     #folder = 'C:\\Source\\Repos\\mysql-excel\\'+str(language)+'_course_styled\\'
-    #folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\\'+str(language)+'_course_styled'
+    folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\\'+str(language)+'_course_revised'
     #folder = r'C:\Users\dmitrysh\OneDrive - NTNU'
-    folder = r'C:\Source\Repos\mysql-excel\English_course_revised'
+    #folder = r'C:\Source\Repos\mysql-excel\English_course_revised'
     main(cursor=cursor, collection_name = collection_name, course_folder=folder)
     #cnxn.commit()
     #cnxn.close()

@@ -169,15 +169,15 @@ def get_style(header_cells,sheet):
 def main(folder, output):
     inputfolder = folder
     warnings_file = open('warnings.txt','w')
-    ser_file = open('server_private.md','r')
+    ser_file = open('server_private_remote.md','r')
     info = []
     for i in ser_file:
         info.append(i.split()[-1].replace("'",''))
     [server,database,username,password] = info
     
     #connect to the calst database
-    cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
-    cursor = cnxn.cursor()
+    #cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
+    #cursor = cnxn.cursor()
     
     folder_path = Path(folder)
     if folder_path.exists():
@@ -325,6 +325,6 @@ if __name__ == "__main__":
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\\Numbers 1'
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 2\\Nationalities'
         #folder = 'C:\Source\Repos\mysql-excel\Greek_course_styled'
-        folder = 'C:\Source\Repos\mysql-excel\Italian_course'
+        folder = r'C:\Source\Repos\mysql-excel\English_course_revised'
         output = 'lessons_structure.xlsx'
         main(folder=folder,output= output)

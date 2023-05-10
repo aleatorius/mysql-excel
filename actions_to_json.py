@@ -568,7 +568,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
 def main(cursor, collection_name, course_folder):
     path = Path(course_folder)
     #the path to the course summary file
-    structure_file  = Path(course_folder+'\\lessons_structure.xlsx')
+    structure_file  = Path(course_folder+'\\lessons_structure_to_json.xlsx')
 
     if structure_file.exists():
         #check actions column for the command "submit"
@@ -576,7 +576,7 @@ def main(cursor, collection_name, course_folder):
         sheet = wb_structure['Lessons']
         to_submit = []
         print(str(structure_file))
-        action_col = get_column(sheet=sheet, row = 1, name='Actions')
+        action_col = get_column(sheet=sheet, row = 2, name='Level 4')
         
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
@@ -619,9 +619,10 @@ if __name__ == "__main__":
     #connect to the calst database
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
-    language='Italian'
+    language='Spanish'
     dbname = get_database('calst_test')
     collection_name = dbname[language]
+    #collection_name = dbname['testlang']
     output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'
     print(output_sound)
  

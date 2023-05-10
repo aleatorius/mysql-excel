@@ -392,16 +392,20 @@ def get_exercise_infopage(cursor,wbout,entry,input_wrapper):
     return folder_exercise
 
 def wrapper_to_folder(cursor,input_folder,input_wrapper):
+    print(input_wrapper)
 
     #excel file with wrapper info
     get_wrapper_file(cursor=cursor, input_folder=input_folder,input_wrapper=input_wrapper)
 
     #list of exercises
 
-    sqlcom = "SELECT * FROM [dbo].[WrapperExercises] WHERE Wrapper_Id = "+input_wrapper
+    sqlcom = "SELECT * FROM [CalstContent].[dbo].[WrapperExercises] WHERE Wrapper_Id = "+input_wrapper
     cursor.execute(sqlcom)
     data = [list(i) for i in cursor.fetchall()]
+    print(data)
+    
     exercises = [i[1] for i in data]
+    print(exercises)
     
     #Exercises, folders
     for entry in exercises:
@@ -409,7 +413,19 @@ def wrapper_to_folder(cursor,input_folder,input_wrapper):
         #the first sheet, with wrapper info, from wrappers db
         folder_exercise = get_exercise_infopage(cursor=cursor,wbout=wbout, entry=entry, input_wrapper=input_wrapper)
         folder_exercise = input_folder+'/'+folder_exercise
-        Path(folder_exercise).mkdir(parents=True, exist_ok=True)
+
+        result = True
+        while result is True:
+            p = Path(folder_exercise)
+            result = p.exists()
+            print(result, folder_exercise)
+            if result == False:
+                pass
+            else:
+                folder_exercise = folder_exercise + '_extra'
+        print(result, folder_exercise)   
+        Path(folder_exercise).mkdir(parents=True, exist_ok=False)
+        
         print(folder_exercise)
         #create sheet confusionbox and transcriptions
         #get the list of confusion box numbers, pay attention, for MP exercise each confusionbox corresponds to either minimal pair words, 
@@ -475,18 +491,17 @@ def main():
     localcase = False
 
     if localcase:
-        Path('Test').mkdir(parents=True, exist_ok=True)
+        Path('Test_nor').mkdir(parents=True, exist_ok=True)
         #wrapper_to_folder(cursor,"Test","1296")
         #wrapper_to_folder(cursor,"Test","1302")
-        #wrapper_to_folder(cursor,"Test","1346")
-        #wrapper_to_folder(cursor,"Test","156")
-        wrapper_to_folder(cursor,"Test","1336")
+        wrapper_to_folder(cursor,"Test","79")
+        #wrapper_to_folder(cursor,"Easy/Italian","1293")
     else:  
-        course = 'Greek'
+        course = 'English'
         sqlcom = "SELECT * FROM [CalstContent].[dbo].[Wrappers] where [Name] = '"+course+"EntryPoint'"
         cursor.execute(sqlcom)  
         data = [list(i) for i in cursor.fetchall()] 
-        folder_level_0 = course+'_course'
+        folder_level_0 = course+'_course_revised'
         Path(folder_level_0).mkdir(parents=True, exist_ok=True)
         wrapper(cursor, data[0], folder_level_0)
         sqlcom = "SELECT * FROM [dbo].[Wrappers] WHERE WrapperId = "+ str(data[0][0])
@@ -510,7 +525,7 @@ def main():
                 level_3 = [list(i) for i in cursor.fetchall()] 
 
                 for entry in level_3:          
-                    folder_level_3 = folder_level_2+'/'+str(entry[2]).replace(":","_colon").replace("?","_qm_").replace('/','_backslash_')
+                    folder_level_3 = folder_level_2+'/'+str(entry[2]).replace(":","_colon").replace("?","_qm_").replace('/','_backslash_').replace("'\'r'\'n", "")
                     Path(folder_level_3).mkdir(parents=True, exist_ok=True)
                     print(folder_level_3)
                     wrapper_to_folder(cursor,folder_level_3,str(entry[0]))
