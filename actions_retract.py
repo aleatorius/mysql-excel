@@ -140,7 +140,7 @@ def main(course_folder,cursor, cnxn):
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
                 print(str(cell.value).lower())
-                if str(cell.value).lower() == 'resubmit' or str(cell.value).lower() == 'submit' or str(cell.value).lower() == 'retract':
+                if str(cell.value).lower() == 'retract&resubmit' or str(cell.value).lower() == 'retract':
                     to_submit.append(cell.row)
         # list to_submit contains rows of summary file to submit
         print('rows to_submit: ', to_submit)
@@ -164,8 +164,9 @@ if __name__ == "__main__":
     #connect to the calst database
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
-    #folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
-    folder = 'G:\\My Drive\\CALST_courses\\Italian_course_styled\\'
+    #folder = 'C:\\Source\\Repos\\mysql-excel\\Italian_course_styled\\'
+    #folder = 'G:\\My Drive\\CALST_courses\\Italian_course_styled\\'
+    folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\Spanish_course_styled\\'
     main(course_folder=folder, cursor=cursor, cnxn=cnxn)
     cnxn.commit()
-    cnxn.close()
+    cnxn.close

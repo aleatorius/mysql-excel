@@ -1,11 +1,6 @@
-from re import template
-import pyodbc 
+#to be used from actions_templates
 import argparse
 from pathlib import Path
-import os
-from openpyxl import Workbook
-from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
-from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl import load_workbook
 from openpyxl.utils.cell import cols_from_range, coordinate_to_tuple,get_column_interval
 
@@ -82,5 +77,5 @@ if __name__ == "__main__":
         main(folder = args.folder, diff=args.diff)
     else:
         #folder = 'C:\Source\Repos\python_tools\Spanish_course_styled\Beginner\Lesson 1\The alphabet'
-        folder = r'C:\Source\Repos\mysql-excel\Spanish_course_styled\Beginner\Lesson 2\Nationalities'
+        folder = r'C:\Source\Repos\mysql-excel\Italian_course_styled'
         main(folder=folder)

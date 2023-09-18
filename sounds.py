@@ -17,7 +17,7 @@ def get_header(cursor,table):
 
 
 def main():
-    ser_file = open('server_private.md','r')
+    ser_file = open('server_private_20221126.md','r')
     info = []
     for i in ser_file:
         info.append(i.split()[-1].replace("'",''))
@@ -29,21 +29,21 @@ def main():
     cursor = cnxn.cursor()
 
     #wrapper corresponds to a second levels structures like lessons 1, 2,3 
-
+    table = 'Narrators'
       
-    sqlcom = "SELECT * FROM [CalstContent].[dbo].[Sounds]"
+    sqlcom = "SELECT * FROM ["+table+"]"
     cursor.execute(sqlcom)  
     data = [list(i) for i in cursor.fetchall()] 
     
 
-    header_0,header = get_header(cursor=cursor,table='Sounds')
+    header_0,header = get_header(cursor=cursor,table=table)
     print(header_0,header)
 
     wbout = Workbook()
     sheet = wbout.active
-    sheet.title = "Sounds"
+    sheet.title = table
     header_cells = []
-    header_0,header = get_header(cursor=cursor, table='Sounds')
+    header_0,header = get_header(cursor=cursor, table=table)
     sheet.append(header_0)
     sheet.append(header)
     header_cells.append(len(header))
@@ -52,7 +52,7 @@ def main():
         print(i)
         sheet.append(i)
     get_style(header_cells,sheet)
-    wbout.save("sounds.xlsx")
+    wbout.save(table+".xlsx")
     wbout.close()
 
 

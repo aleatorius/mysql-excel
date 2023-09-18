@@ -55,6 +55,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     names,columns,ranges = get_sheet_structure(sheet = sheet)
     min_col, min_row,max_col,max_row=ranges[names.index('WrapperExercises')]
     ids = columns[names.index('WrapperExercises')].index('Exercise_Id')
+    
     entry = []
     for cells in sheet.iter_cols(min_col=min_col,min_row=line, max_col=max_col, max_row=line):
         for cell in cells:
@@ -68,11 +69,16 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
             level.append(cell.value)
     print(level)
     dick= {}
-    if id !=None:
-        dick['_id'] = str(id)
+    dick['MinimalPair_UPSIDSound']=""
+    dick['Second_MinimalPair_UPSIDSound']=""
+    dick['MinimalPair_IPA']=""
+    dick['Second_MinimalPair_IPA']=""
+
+#    if id !=None:
+#        dick['_id'] = str(id)
     if level[-1] != None:
         print(level[-1]) 
-        dick["Exercise name"] =  level[-1]
+        dick["Exercise_name"] =  level[-1]
         #find group name in this case
         print(min_col, min_row,max_col,max_row)
         value = False
@@ -81,8 +87,8 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
             cell = sheet.cell(current_row,column=max_col-1)
             if cell.value:
                 value = True
-                print(cell.value, 'Group exercise')
-                dick['Group lesson'] = cell.value
+                print(cell.value, 'Group_exercise')
+                dick['Group_lesson'] = cell.value
             current_row -= 1
     elif level[-2] != None:
         #dick["Exercise name"] =  level[-2]
@@ -135,8 +141,9 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
                 dick[entry[entry_columns.index('Key')]] = entry[entry_columns.index('Value')]
             if entry[entry_columns.index('Description')]:
                 dick[entry[entry_columns.index('Key')]+'_description'] = entry[entry_columns.index('Description')]
-    try:
+    if dick['MinimalPair_UPSIDSound'] !="":
         va = str(dick['MinimalPair_UPSIDSound'])
+        
         if '/' in va:
             for lue in va.split('/'):
                 print(lue)
@@ -152,7 +159,9 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
             sound = cursor.fetchall()[0]
             dick['MinimalPair_UPSIDSound'] = sound[4]
             dick['MinimalPair_IPA'] = sound[1]
-
+    else:
+        pass
+    if dick['Second_MinimalPair_UPSIDSound'] != "":
         va = str(dick['Second_MinimalPair_UPSIDSound'])
         if '/' in va:
             for lue in va.split('/'):
@@ -169,13 +178,10 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
             sound = cursor.fetchall()[0]
             dick['Second_MinimalPair_UPSIDSound'] = sound[4]
             dick['Second_MinimalPair_IPA'] = sound[1]
-
-        
-
-
-        
-    except KeyError:
+    else:
         pass
+
+        
         
 
     
@@ -191,7 +197,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     for sheetname in wb_exercise.sheetnames:
         print(sheetname)
         if 'Vocab' in  sheetname:
-            case_vocab = True
+            case_vocab = False
             vocab.append(sheetname)
         elif 'MP' in sheetname:
             #work on Vocab-Confusion Box
@@ -204,8 +210,11 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
             pass
   
     print(case_mp,case_vocab, case_nw)
+    dick['MP_wordpairs']=[]
+    dick['MP_nonwords'] = []
     
     
+
     if case_vocab:
         #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
         # was introduced
@@ -568,7 +577,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
 def main(cursor, collection_name, course_folder):
     path = Path(course_folder)
     #the path to the course summary file
-    structure_file  = Path(course_folder+'\\lessons_structure_to_json.xlsx')
+    structure_file  = Path(course_folder+'\\lessons_structure.xlsx')
 
     if structure_file.exists():
         #check actions column for the command "submit"
@@ -577,11 +586,16 @@ def main(cursor, collection_name, course_folder):
         to_submit = []
         print(str(structure_file))
         action_col = get_column(sheet=sheet, row = 2, name='Level 4')
+    
+    
+        key = get_column(sheet=sheet, row = 1, name='Actions')
+        print(key, action_col)
         
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
             for cell in cells:
-                #if str(cell.value).lower() == 'retract':
-                if cell.value:
+                #if str(cell.value).lower() == 'test':
+                if cell.value and not sheet.cell(row=cell.row, column=key).value == 'del':
+                    
                     to_submit.append(cell.row)
                     print(cell.value)
         # list to_submit contains rows of summary file to submit
@@ -595,12 +609,7 @@ def main(cursor, collection_name, course_folder):
             #try:
             dictionary = work_with_line_in_structure_lessons(cursor=cursor, line=line,course_sheet=sheet,course_path=path)
        
-            Lessons = ['Lesson '+str(i) for i in range(1,6) ]
-            if dictionary['Lesson'] in Lessons:
-                dictionary['Category'] = 'Consonants'
-            else:
-                dictionary['Category'] = 'Vowels'
-
+            
             collection_name.insert_one(dictionary)
             
             #cell_action.value = 'submitted'
@@ -624,10 +633,10 @@ if __name__ == "__main__":
     #connect to the calst database
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
-    language='Italian'
-    dbname = get_database('calst_new_test')
+    language='Norwegian'
+    dbname = get_database('calst_test')
     collection_name = dbname[language]
-    #collection_name = dbname['testlang']
+    #collection_name = dbname['italian_test_nonword']
     output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'
     print(output_sound)
  
@@ -636,8 +645,9 @@ if __name__ == "__main__":
     #folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
     #folder = 'G:\\My Drive\\CALST_courses\\'+str(language)+'_course_styled\\'
     #folder = 'C:\\Source\\Repos\\mysql-excel\\'+str(language)+'_course_styled\\'
-    folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\\'+str(language)+'_course_styled'
+    #folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\\'+str(language)+'_course_styled'
     #folder = r'C:\Users\dmitrysh\OneDrive - NTNU'
+    folder = r'C:\Source\Repos\mysql-excel\Norwegian_course_revised'
     main(cursor=cursor, collection_name = collection_name, course_folder=folder)
     #cnxn.commit()
     #cnxn.close()

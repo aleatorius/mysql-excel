@@ -532,7 +532,6 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
      
             words.append(dick_word)
 
-     
         dick['MP_nonwords'] = words
         
         #import json
