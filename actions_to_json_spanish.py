@@ -48,79 +48,103 @@ def get_entry_by_name(sheet, table_name, names, columns,ranges, row):
     return entries
 
 
-def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
-    
-    
+def work_with_line_in_structure_lessons(line,course_sheet, course_path):
     path=course_path
     sheet = course_sheet
     folder_col = get_column(sheet=sheet, row=1, name='Folders')
     names,columns,ranges = get_sheet_structure(sheet = sheet)
-    min_col, min_row,max_col,max_row=ranges[names.index('WrapperExercises')]
-    ids = columns[names.index('WrapperExercises')].index('Exercise_Id')
     
-    entry = []
-    for cells in sheet.iter_cols(min_col=min_col,min_row=line, max_col=max_col, max_row=line):
-        for cell in cells:
-            entry.append(cell.value)
-    print(entry)
-    
-    id = entry[columns[names.index('WrapperExercises')].index('Exercise_Id')]
     min_col, min_row,max_col,max_row=ranges[names.index('Level names')]
     level = []
+    keywords = []
+    keywords_cols = []
+    for cells in sheet.iter_cols(min_col=min_col,min_row=2, max_col=max_col, max_row=2):
+        for cell in cells:
+            keywords.append(cell.value)
+            keywords_cols.append(cell.column)
+            print(cell.value)
+    print(keywords)
+    
+
+    
     for cells in sheet.iter_cols(min_col=min_col,min_row=line, max_col=max_col, max_row=line):
         for cell in cells:
             level.append(cell.value)
-    print(level)
+            print(cell.value)
     
     dick= {}
-    dick['MinimalPair_UPSIDSound']=""
-    dick['Second_MinimalPair_UPSIDSound']=""
-    dick['MinimalPair_IPA']=""
-    dick['Second_MinimalPair_IPA']=""
-    dick['Position']=""
-    dick['Extra']=[]
-
-
+  
+    dick['MinimalPair_IPA'] = []
+    dick['Second_MinimalPair_IPA'] = []
+    dick['Target_IPA'] = []
+    dick['Position'] = None
+    dick['Extra'] = []
     extra=[]
     known = []
-    titles_replace_key = get_column(sheet=course_sheet, row = 1, name='Titles')
-    #known = ['MinimalPair_UPSIDSound','Second_MinimalPair_UPSIDSound', 'MinimalPair_IPA', 'Second_MinimalPair_IPA','Type',
-    #         'Type_description','ExerciseName' ]
+    #if id !=None:
+    #    dick['_id'] = str(id)
+    dick['L1-L2map_exception'] = None
+    dick['Contrast_information'] = None
+    dick["Exercise_name"] = None
 
-#    if id !=None:
-#        dick['_id'] = str(id)
-    if level[-1] or sheet.cell(row=line,column=titles_replace_key).value:
         
-       
+    if level[keywords.index('Sound contrast')] != None:
         
-        print(sheet.cell(row=line,column=titles_replace_key).value)
+        dick["Exercise_name"] =  level[keywords.index('Sound contrast')]
+        if level[keywords.index('L1-L2map exception')]:
 
-        if sheet.cell(row=line,column=titles_replace_key).value:
-            dick["Exercise_name"] =  sheet.cell(row=line,column=titles_replace_key).value
-        else:
-            dick["Exercise_name"] =  level[-1]
-        ipas = dick["Exercise_name"].split()
-        dick['MinimalPair_IPA']=ipas[0] 
-        dick['Second_MinimalPair_IPA']=ipas[2]
-        print(ipas)
-        if len(ipas) == 4:
-            dick['Position'] = ipas[-1]
-        print(dick)
+            dick['L1-L2map_exception'] = level[keywords.index('L1-L2map exception')]
+        if level[keywords.index('Contrast information')]:
+
+            dick['Exercise_information'] = level[keywords.index('Contrast information')]
+        
+        ipos = dick["Exercise_name"].split(' ')
+    
+        if len(ipos) > 1:
+            dick['Position'] = ipos[-1]
+
+    
+        ipas = ipos[0].split('-')
+    
+        for ipa in ipas[0].split('/'):
+            dick['MinimalPair_IPA'].append(ipa)
+        for ipa in ipas[1].split('/'):
+            dick['Second_MinimalPair_IPA'].append(ipa)
+        
+
         
         #find group name in this case
-        print(min_col, min_row,max_col,max_row)
+      
         value = False
         current_row = line-1
         while not value:
-            cell = sheet.cell(current_row,column=max_col-1)
+            cell = sheet.cell(current_row,column=keywords_cols[keywords.index('Target')])
             if cell.value:
                 value = True
-                print(cell.value, 'Group_exercise')
+                print(cell.value, 'Group exercise')
                 dick['Group_lesson'] = cell.value
             current_row -= 1
-    elif level[-2] != None:
-        #dick["Exercise name"] =  level[-2]
-        pass
+
+
+        
+        
+    
+       
+        for ipa in dick["Group_lesson"].split('/'):
+            dick['Target_IPA'].append(ipa)
+
+
+
+       
+        
+    elif level[keywords.index('Other contrast')] != None:
+
+        dick["Exercise_name"] =  level[keywords.index('Other contrast')]
+        if level[keywords.index('Contrast information')]:
+
+            dick['Exercise_information'] = level[keywords.index('Contrast information')]
+
+    
     else:
         pass
 
@@ -128,23 +152,49 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     value = False
     current_row = line-1
     while not value:
-        cell = sheet.cell(current_row,column=max_col-2)
+        cell = sheet.cell(current_row,column=keywords_cols[keywords.index('Lesson')])
         if cell.value:
             value = True
             print(cell.value, 'lesson')
             dick['Lesson'] = cell.value
         current_row -= 1
-    
+
     value = False
     current_row = line-1
-    while not value:
-        cell = sheet.cell(current_row,column=max_col-3)
+    dick['Level'] = None
+    while not (value or current_row < 3):
+        cell = sheet.cell(current_row,column=keywords_cols[keywords.index('Course level')])
         if cell.value:
             value = True
             print(cell.value, 'level')
             dick['Level'] = cell.value
         current_row -= 1
+   
     
+    value = False
+    current_row = line-1
+    dick['Category'] = None
+    while not (value or current_row < 3):
+        cell = sheet.cell(current_row,column=keywords_cols[keywords.index('Category')])
+        if cell.value:
+            value = True
+            print(cell.value, 'level')
+            dick['Category'] = cell.value
+        current_row -= 1
+    
+    value = False
+    current_row = line-1
+    dick['Category_information'] = None
+    while not (value or current_row < 3):
+        cell = sheet.cell(current_row,column=keywords_cols[keywords.index('Category information')])
+        
+        
+        if cell.value:
+            value = True
+        
+            dick['Category_information'] = cell.value
+        current_row -= 1
+   
     #open an exercise.xlsx
     exercise_path = Path(sheet.cell(row=line, column=folder_col).value.replace('..',str(path.parent)))
     exercise_file = exercise_path/'exercise.xlsx'
@@ -176,10 +226,6 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
                 extra.append({str(entry[entry_columns.index('Key')])+'_description':  str(entry_columns.index('Description'))})
     
     dick['Extra'] = extra
-    print(dick)
-    
-
-        
         
 
     
@@ -195,7 +241,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     for sheetname in wb_exercise.sheetnames:
         print(sheetname)
         if 'Vocab' in  sheetname:
-            case_vocab = False
+            case_vocab = True
             vocab.append(sheetname)
         elif 'MP' in sheetname:
             #work on Vocab-Confusion Box
@@ -211,9 +257,6 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     dick['MP_wordpairs']=[]
     dick['MP_nonwords'] = []
     
-    
-    
-
     if case_vocab:
         #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
         # was introduced
@@ -271,13 +314,13 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
             #words entry is borrowed from a confusionbox sheet
             entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[-1]
             
-        
+            print(entry)
             
             dick_word['word'] = entry[entry_columns.index('Text')]
-         
+            print(dick_word)
             
             c = Counter(names_wp)
-            
+            print(c['Properties'], "here")
             #can be more than 1 properties, iterate
             
             for i in range(c['Properties']):
@@ -302,9 +345,10 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
                 audio = []
                 for i in range(c_pron['Pronunciations']):
                     entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Pronunciations', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[i]
-                        
+                    print(entry, entry_columns)
+                    
 
-                  
+                    print(entry, entry[entry_columns.index('URI')])
                     if entry[entry_columns.index('URI')]:
                         audio.append(entry[entry_columns.index('URI')].replace('H:/Workspace/CalstFiles/WordObjectContent',''))
                 dick_word['audio_'+str(num)] = audio    
@@ -380,57 +424,35 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
             #the next sheet, Words, where we specify properties of words, normally it is translations and pictures, if any
             entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet,table_name='ConfusionBoxes', names=names,ranges=ranges,row=row,columns=columns)[-1]
          
-            dialect = entry[2]
-            bin = entry[-1]
-         
             
+            bin = entry[-1]
+            print(entry, bin, "bin")
+            
+            #words entry is borrowed from a confusionbox sheet
             entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[-1]
             
-        
             
             
             dick_word['word'] = entry[entry_columns.index('Text')]
-           
             dick_word['bin'] = bin
             
+            print(dick_word)
+            
             c = Counter(names_wp)
-        
+            print(c['Properties'], "here")
             #can be more than 1 properties, iterate
-            dick_word['Translation'] =[]
-            dick_word['Translation_description'] = []
+            
             for i in range(c['Properties']):
                 entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Properties', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[i]
-                if entry[entry_columns.index('Key')]!='Translation':
+                if entry[entry_columns.index('Key')]:
                     if entry[entry_columns.index('Value')]:
                         dick_word[entry[entry_columns.index('Key')]] = entry[entry_columns.index('Value')]
                     if entry[entry_columns.index('Description')]:
                         dick_word[entry[entry_columns.index('Key')]+'_description'] = entry[entry_columns.index('Description')]
-             
-                if entry[entry_columns.index('Key')] == 'Translation' and entry[entry_columns.index('Description')]:
-                    if entry[entry_columns.index('Value')]:
-                        dick_word['Translation'].append(entry[entry_columns.index('Value')])
-                        dick_word['Translation_description'].append(entry[entry_columns.index('Description')])
-                    else:
-                        pass
-    
-            
-            audio_oslo = []  
-            audio_trondheim = []
-            audio_stavanger = []
-            audio_malm = []
-            audio_bergen = []
-            audio_sandnessjoeen = []
-            audio_elverum = []
-            audio_tromsoe = []  
-            audio = [('Oslo', audio_oslo),('Trondheim',audio_trondheim),('Stavanger',audio_stavanger),('Malm',audio_malm), ('Bergen',audio_bergen),
-                     ('Sandnessjøen',audio_sandnessjoeen),('Elverum',audio_elverum),('Tromsø', audio_tromsoe) ]
                 
-            dick_word['dialect'] = audio[dialect-1][0]
-            
+            for num in [0,1]:
                 #here we go to speaker transciptrion sheets, where sound files for speakers are specified
-            for sheet_name in [s for s in vocab if 'Speaker_Trans_' in s]:
-                
-                
+                sheet_name = [s for s in vocab if 'Speaker_Trans_'+str(num) in s][0]
                 sheet_st = wb_exercise[sheet_name]
                 names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
                 #words and transcription are borrowed from previous confusionbox sheet
@@ -439,36 +461,168 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
                 
                 #can be several sound files per word, so here we iterate over all occurances
                 c_pron = Counter(names_st)
-                
+                audio = []
                 for i in range(c_pron['Pronunciations']):
                     entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Pronunciations', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[i]
+                    print(entry, entry_columns)
                     
-                    if entry[entry_columns.index('URI')] and  entry[entry_columns.index('Dialect_Id')]==dialect:
-                        audio[entry[entry_columns.index('Dialect_Id')]-1][1].append(entry[entry_columns.index('URI')])
-                    
-            for i in audio:
-                dick_word['audio_'+i[0]] = i[1]   
+
+                    print(entry, entry[entry_columns.index('URI')])
+                    if entry[entry_columns.index('URI')]:
+                        audio.append(entry[entry_columns.index('URI')].replace('H:/Workspace/CalstFiles/WordObjectContent',''))
+                dick_word['audio_'+str(num)] = audio    
             wordpair.append(dick_word)
-         
-            
-            
             if switch == 0:
                 switch = 1
             else:
                 switch = 0
                 words.append(wordpair)
 
-
-
         
         
         dick['MP_wordpairs'] = words
-        
-        
                 
    
         
      
+    if case_nw:
+        #confusionbox id should be created or checked once, all other lines carry the same confusionbox id, that's whe the keyword firstrun 
+        # was introduced
+        first_run = True
+        #Force_Rewrite = False
+        vocab = nw
+        print(vocab)
+        max_info = []
+        #this checks whether all sheets have the same number of lines as it should be. Consistency check.
+        for sheet_name in vocab:
+            sheet = wb_exercise[sheet_name]
+            max_info.append(sheet.max_row)
+        print(max_info)
+        
+        isequal = all_equal(max_info)
+        if isequal:
+            maximum_row = max_info[0]
+        else:
+            print('something wrong with number of rows, terminating')
+            exit()
+        #info lines are 2 rows now, but I keep the possibility that we may have more, that's why I use data_row which is always three as a parameter, 
+        # for future changes
+        data_row = 3
+        #sheet names for word properties and confusion box, to be used next steps
+        sheet_name = [s for s in vocab if 'Confusion' in s][0]
+        print(sheet_name)
+        
+        sheet_cb = wb_exercise[sheet_name]
+        names_cb,columns_cb,ranges_cb = get_sheet_structure(sheet = sheet_cb)
+
+        sheet_name = [s for s in vocab if 'Words Properties' in s][0]
+        print(sheet_name)
+        sheet_wp = wb_exercise[sheet_name]
+        names_wp,columns_wp,ranges_wp = get_sheet_structure(sheet = sheet_wp)
+        
+        min_col, min_row, max_col, max_row = ranges_wp[names_wp.index('Words')]
+        for row in range(3,sheet_wp.max_row+1):
+            cell = sheet_wp.cell(row=row,column=min_col+columns_wp[names_wp.index('Words')].index('Text'))
+            if cell.value == None:
+                break
+        max_word = row
+        print(max_word, maximum_row)
+        if maximum_row != max_word:
+            maximum_row = max_word
+        
+        print(maximum_row)
+        
+        words = []
+        for row in range(data_row,maximum_row+1):
+            dick_word = {}
+            #start with confusionbox,
+
+            # this will either create a new confusionbox id or just replace current entry with the same confusionbox id details, 
+            # just one entry for all the lines in case of vocab    
+          
+             #the next sheet, Words, where we specify properties of words, normally it is translations and pictures, if any
+            entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_cb,table_name='ConfusionBoxes', names=names_cb,ranges=ranges_cb,row=row,columns=columns_cb)[-1]
+         
+            
+            bin = entry[-1]
+            print(entry,bin,  "conf")
+            
+            
+            #words entry is borrowed from a confusionbox sheet
+            entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[-1]
+            
+            print(entry)
+            
+            dick_word['word'] = entry[entry_columns.index('Text')]
+            dick_word['bin'] = bin
+            print(dick_word)
+            
+            
+            c = Counter(names_wp)
+            print(c['Properties'], "here")
+            #can be more than 1 properties, iterate
+            
+            for i in range(c['Properties']):
+                entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Properties', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[i]
+                if entry[entry_columns.index('Key')]:
+                    if entry[entry_columns.index('Value')]:
+                        dick_word[entry[entry_columns.index('Key')]] = entry[entry_columns.index('Value')]
+                    if entry[entry_columns.index('Description')]:
+                        dick_word[entry[entry_columns.index('Key')]+'_description'] = entry[entry_columns.index('Description')]
+
+
+
+            c = Counter(names_cb)
+            print(c['Properties'], "here", names_cb)
+            
+            if c['Properties']==1:
+
+                entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_cb,table_name='Properties', names=names_cb,ranges=ranges_cb,row=row,columns=columns_cb)[-1]
+
+                print(entry)
+                if entry[entry_columns.index('Key')] == 'PairWord':
+                    dick_word['nonword'] = entry[entry_columns.index('Value')]
+                else:
+                    pass
+                
+                
+            
+            c = Counter(names_wp)
+            print(c['Properties'], "here")
+
+
+
+            for num in [0,1]:
+                #here we go to speaker transciptrion sheets, where sound files for speakers are specified
+                sheet_name = [s for s in vocab if 'Speaker_Trans_'+str(num) in s][0]
+                sheet_st = wb_exercise[sheet_name]
+                names_st,columns_st,ranges_st = get_sheet_structure(sheet = sheet_st)
+                #words and transcription are borrowed from previous confusionbox sheet
+                
+                
+                
+                #can be several sound files per word, so here we iterate over all occurances
+                c_pron = Counter(names_st)
+                audio = []
+                for i in range(c_pron['Pronunciations']):
+                    entry,entry_range,entry_columns,entry_styles = get_entry_by_name(sheet=sheet_st,table_name='Pronunciations', names=names_st,ranges=ranges_st,row=row,columns=columns_st)[i]
+                    print(entry, entry_columns)
+                    
+
+                    print(entry, entry[entry_columns.index('URI')])
+                    if entry[entry_columns.index('URI')]:
+                        audio.append(entry[entry_columns.index('URI')].replace('H:/Workspace/CalstFiles/WordObjectContent',''))
+                dick_word['audio_'+str(num)] = audio    
+     
+            words.append(dick_word)
+
+        dick['MP_nonwords'] = words
+        
+        #import json
+        #with open('result.json', 'w') as fp:
+        #    json.dump(dick, fp)
+         
+   
 
     else:
         pass
@@ -476,10 +630,10 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     return(dick)
  
                
-def main(cursor, collection_name, course_folder):
+def main(collection_name, course_folder):
     path = Path(course_folder)
     #the path to the course summary file
-    structure_file  = Path(course_folder+'\\lessons_structure_full.xlsx')
+    structure_file  = Path(course_folder+'\\lessons_structure_to_json_JK.xlsx')
 
     if structure_file.exists():
         #check actions column for the command "submit"
@@ -488,97 +642,50 @@ def main(cursor, collection_name, course_folder):
         to_submit = []
         print(str(structure_file))
         action_col = get_column(sheet=sheet, row = 1, name='Actions')
-    
-    
-        key = get_column(sheet=sheet, row = 1, name='Actions')
-        level_1_key = get_column(sheet=sheet, row = 2, name='Level 1')
-        level_2_key = get_column(sheet=sheet, row = 2, name='Level 2')
-        titles_key = get_column(sheet=sheet, row = 1, name='Titles')
-        dialects_key = get_column(sheet=sheet, row = 1, name='Dialect selection')
-
+        act_col = get_column(sheet=sheet, row = 1, name='Actions')
+        level_1_key = get_column(sheet=sheet, row = 2, name='Category')
+        level_2_key = get_column(sheet=sheet, row = 2, name='Lesson')
+       
         level_1 = level_2 = ''
-
         for cells in sheet.iter_cols(min_col=action_col,min_row=3, max_col=action_col, max_row=sheet.max_row):
+            
             for cell in cells:
+                cell_action = sheet.cell(row=cell.row,column=act_col)
                 if sheet.cell(row=cell.row, column=level_1_key).value:
                     level_1 = sheet.cell(row=cell.row, column=level_1_key).value
                 if sheet.cell(row=cell.row, column=level_2_key).value:
                     level_2 = sheet.cell(row=cell.row, column=level_2_key).value
-                if ( sheet.cell(row=cell.row, column=key).value == 'submit' or sheet.cell(row=cell.row, column=key).value == 'new' ) and level_1 == 'Beginner':
-                #if sheet.cell(row=cell.row, column=key).value == 'test':
-                    to_submit.append((level_1,level_2, sheet.cell(row=cell.row, column=key).value, sheet.cell(row=cell.row, column=titles_key).value, cell.row ))
-                    
+              
+                #if str(cell.value).lower() == 'retract':
+                if cell.value == 'submit':
+                    to_submit.append((level_1,level_2, cell.row ))
+                    print(cell.value)
         # list to_submit contains rows of summary file to submit
+        print('rows to_submit: ', to_submit)
+        
+        
         
         
         
         
         
         for line in to_submit:
-            cell_action = sheet.cell(row=line[-1],column=key)
-           
-            
+            cell_action = sheet.cell(row=line[-1],column=act_col)
             #try:
-            
-                
-            dictionary = work_with_line_in_structure_lessons(cursor=cursor, line=line[-1],course_sheet=sheet,course_path=path)
-            Lessons = ['Lesson '+str(i) for i in range(1,6) ]
-            if dictionary['Lesson'] in Lessons:
-                dictionary['Category'] = 'Consonants'
-            else:
-                dictionary['Category'] = 'Vowels'
+            dictionary = work_with_line_in_structure_lessons(line=line[-1],course_sheet=sheet,course_path=path)
+            print(dictionary, "dic")
             
             
-            if sheet.cell(row=line[-1], column=dialects_key).value:
-                audio = [x.strip(' ') for x in sheet.cell(row=line[-1], column=dialects_key).value.split(',')]
-                newarray = []
-                dialects = []
-                for i in dictionary['MP_wordpairs']:
-                    if i[0]['dialect'] in audio:
-                        newarray.append(i) 
-                        dialects.append(i[0]['dialect'])
-                    else:
-                        pass
-                dictionary['MP_wordpairs'] = newarray
-              
-                    
             
-                numbers=[]
-                for i in audio:
-                    numbers.append(dialects.count(i))
-                print(max(numbers), "array size max")
-                if max(numbers) > 7:
-                    collection_name.insert_one(dictionary)
-                    cell_action.value = 'submitted'
-                else:
-                    cell_action.value = 'rejected'
-
-
-            else:
-                audio = ['Oslo', 'Trondheim','Stavanger','Malm','Bergen','Sandnessjøen','Elverum','Tromsø']
-
-                dialects = []
-                for i in dictionary['MP_wordpairs']:
-                    dialects.append(i[0]['dialect'])
-                    
-                    
-            
-                numbers=[]
-                for i in audio:
-                    numbers.append(dialects.count(i))
-                print(max(numbers), "array size max")
-                if max(numbers) > 7:
-                    collection_name.insert_one(dictionary)
-                    cell_action.value = 'submitted'
-                else:
-                    cell_action.value = 'rejected'
-            
+            #dictionary['Category'] = line[0]
+            cell_action.value = 'submitted'
             wb_structure.save(structure_file)
+
+            collection_name.insert_one(dictionary)
             
-            #except:
+                        #except:
                 #cell_action.value = 'failed_submitted'
                 #wb_structure.save(structure_file)  
-            
                      
         
     else:
@@ -586,19 +693,11 @@ def main(cursor, collection_name, course_folder):
         exit() 
 
 if __name__ == "__main__":
-    ser_file = open('server_private.md','r')
-    info = []
-    for i in ser_file:
-        info.append(i.split()[-1].replace("'",''))
-    [server,database,username,password] = info
-    
-    #connect to the calst database
-    cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
-    cursor = cnxn.cursor()
-    language='Norwegian'
-    dbname = get_database('calst_new_test')
+   
+    language='Spanish'
+    dbname = get_database('calst_new_system')
     collection_name = dbname[language]
-    #collection_name = dbname['italian_test_nonword']
+    #collection_name = dbname['testlang']
     output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'
     print(output_sound)
  
@@ -607,9 +706,9 @@ if __name__ == "__main__":
     #folder = 'C:\\Source\\Repos\\mysql-excel\\Spanish_course_styled\\'
     #folder = 'G:\\My Drive\\CALST_courses\\'+str(language)+'_course_styled\\'
     #folder = 'C:\\Source\\Repos\\mysql-excel\\'+str(language)+'_course_styled\\'
-    folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\\'+str(language)+'_course_revised'
+    folder = r'C:\Users\dmitrysh\OneDrive - NTNU\CALST_courses\\'+str(language)+'_course_styled'
     #folder = r'C:\Users\dmitrysh\OneDrive - NTNU'
-    #folder = r'C:\Source\Repos\mysql-excel\Norwegian_course_revised'
-    main(cursor=cursor, collection_name = collection_name, course_folder=folder)
+    main(collection_name = collection_name, course_folder=folder)
     #cnxn.commit()
+
     #cnxn.close()
