@@ -84,7 +84,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
     #if id !=None:
     #    dick['_id'] = str(id)
     dick['L1-L2map_exception'] = None
-    dick['Contrast_information'] = None
+    dick['Exercise_information'] = None
     dick["Exercise_name"] = None
 
         
@@ -657,7 +657,7 @@ def main(collection_name, course_folder):
                     level_2 = sheet.cell(row=cell.row, column=level_2_key).value
               
                 #if str(cell.value).lower() == 'retract':
-                if cell.value == 'submit':
+                if cell.value == 'submitted':
                     to_submit.append((level_1,level_2, cell.row ))
                     print(cell.value)
         # list to_submit contains rows of summary file to submit
@@ -678,7 +678,7 @@ def main(collection_name, course_folder):
             
             
             #dictionary['Category'] = line[0]
-            cell_action.value = 'submitted'
+            cell_action.value = 'resubmitted'
             wb_structure.save(structure_file)
 
             collection_name.insert_one(dictionary)
