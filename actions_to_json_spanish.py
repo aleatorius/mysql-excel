@@ -191,7 +191,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
         if cell.value:
             value = True
             print(cell.value, 'level')
-            dick['Category'] = cell.value
+            dick['Category'] = str(cell.value)+'_'+str(current_row)
         current_row -= 1
     
     value = False
@@ -669,7 +669,7 @@ def main(collection_name, course_folder):
                     level_2 = sheet.cell(row=cell.row, column=level_2_key).value
               
                 #if str(cell.value).lower() == 'retract':
-                if cell.value == 'test':
+                if cell.value == 'submit':
                     to_submit.append((level_1,level_2, cell.row ))
                     print(cell.value)
         # list to_submit contains rows of summary file to submit
@@ -691,7 +691,7 @@ def main(collection_name, course_folder):
             
             dictionary['Excel_weight'] = line[-1]
             cell_action.value = 'submitted'
-           # wb_structure.save(structure_file)
+            wb_structure.save(structure_file)
 
             collection_name.insert_one(dictionary)
             
