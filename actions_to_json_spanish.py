@@ -86,6 +86,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
     dick['L1-L2map_exception'] = None
     dick['Exercise_information'] = None
     dick["Exercise_name"] = None
+    dick['Sidekick'] = [] 
 
         
     if level[keywords.index('Sound contrast')] != None:
@@ -105,7 +106,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
 
     
         ipas = ipos[0].split('-')
-    
+        dick['Sidekick'] = ipas[-1]
         for ipa in ipas[0].split('/'):
             dick['MinimalPair_IPA'].append(ipa)
         for ipa in ipas[1].split('/'):
@@ -140,9 +141,20 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
     elif level[keywords.index('Other contrast')] != None:
 
         dick["Exercise_name"] =  level[keywords.index('Other contrast')]
+        dick['Sidekick'] = level[keywords.index('Other contrast')]
         if level[keywords.index('Contrast information')]:
 
             dick['Exercise_information'] = level[keywords.index('Contrast information')]
+        value = False
+        current_row = line-1
+        while not value:
+            cell = sheet.cell(current_row,column=keywords_cols[keywords.index('Target')])
+            if cell.value:
+                value = True
+                print(cell.value, 'Group exercise')
+                dick['Group_lesson'] = cell.value
+            current_row -= 1
+    
 
     
     else:
@@ -657,7 +669,7 @@ def main(collection_name, course_folder):
                     level_2 = sheet.cell(row=cell.row, column=level_2_key).value
               
                 #if str(cell.value).lower() == 'retract':
-                if cell.value == 'submitted':
+                if cell.value == 'test':
                     to_submit.append((level_1,level_2, cell.row ))
                     print(cell.value)
         # list to_submit contains rows of summary file to submit
@@ -677,9 +689,9 @@ def main(collection_name, course_folder):
             
             
             
-            #dictionary['Category'] = line[0]
-            cell_action.value = 'resubmitted'
-            wb_structure.save(structure_file)
+            dictionary['Excel_weight'] = line[-1]
+            cell_action.value = 'submitted'
+           # wb_structure.save(structure_file)
 
             collection_name.insert_one(dictionary)
             
