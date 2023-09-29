@@ -422,6 +422,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
         words = []
         switch = 0
         wordpair = []
+        group_word = {}
         for row in range(data_row,maximum_row+1):
             if switch == 0:
                 wordpair = []
@@ -488,11 +489,17 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
                 switch = 1
             else:
                 switch = 0
+                if str(bin) in group_word:
+                    group_word[str(bin)].append(wordpair)
+                else:
+                    group_word[str(bin)] = []
+                    group_word[str(bin)].append(wordpair)
                 words.append(wordpair)
 
         
         
         dick['MP_wordpairs'] = words
+        dick['Groups_of_pairs'] = group_word
                 
    
         
@@ -545,6 +552,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
         print(maximum_row)
         
         words = []
+        group_word = {}
         for row in range(data_row,maximum_row+1):
             dick_word = {}
             #start with confusionbox,
@@ -627,8 +635,15 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
                 dick_word['audio_'+str(num)] = audio    
      
             words.append(dick_word)
+            if str(bin) in group_word:
+                group_word[str(bin)].append(dick_word)
+            else:
+                group_word[str(bin)] = []
+                group_word[str(bin)].append(dick_word)
+            
 
         dick['MP_nonwords'] = words
+        dick['Groups_of_singles'] = group_word
         
         #import json
         #with open('result.json', 'w') as fp:
@@ -669,7 +684,7 @@ def main(collection_name, course_folder):
                     level_2 = sheet.cell(row=cell.row, column=level_2_key).value
               
                 #if str(cell.value).lower() == 'retract':
-                if cell.value == 'submit':
+                if cell.value == 'submitted':
                     to_submit.append((level_1,level_2, cell.row ))
                     print(cell.value)
         # list to_submit contains rows of summary file to submit
@@ -690,7 +705,7 @@ def main(collection_name, course_folder):
             
             
             dictionary['Excel_weight'] = line[-1]
-            cell_action.value = 'submitted'
+            cell_action.value = 'resubmitted'
             wb_structure.save(structure_file)
 
             collection_name.insert_one(dictionary)
@@ -707,8 +722,8 @@ def main(collection_name, course_folder):
 if __name__ == "__main__":
    
     language='Spanish'
-    dbname = get_database('calst_new_system')
-    collection_name = dbname[language]
+    dbname = get_database('calst_new_system_bin')
+    collection_name = dbname['Spanish (Castilian)']
     #collection_name = dbname['testlang']
     output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'
     print(output_sound)

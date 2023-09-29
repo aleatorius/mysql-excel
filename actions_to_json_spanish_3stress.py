@@ -422,6 +422,8 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
         words = []
         switch = 0
         wordpair = []
+        group_word = {}
+
         for row in range(data_row,maximum_row+1):
             if switch == 0:
                 wordpair = []
@@ -439,6 +441,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
             
             bin = entry[-1]
             print(entry, bin, "bin")
+            
             
             #words entry is borrowed from a confusionbox sheet
             entry,entry_range,entry_columns, entry_styles = get_entry_by_name(sheet=sheet_wp,table_name='Words', names=names_wp,ranges=ranges_wp,row=row,columns=columns_wp)[-1]
@@ -489,12 +492,17 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
             else:
                 
                 switch = 0
+                if str(bin) in group_word:
+                    group_word[str(bin)].append(wordpair)
+                else:
+                    group_word[str(bin)] = []
+                    group_word[str(bin)].append(wordpair)
                 words.append(wordpair)
 
         
         
         dick['MP_wordpairs'] = words
-                
+        dick['Groups_of_pairs'] = group_word
    
         
      
@@ -546,6 +554,7 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
         print(maximum_row)
         
         words = []
+        group_word = {}
         for row in range(data_row,maximum_row+1):
             dick_word = {}
             #start with confusionbox,
@@ -626,10 +635,17 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path):
                     if entry[entry_columns.index('URI')]:
                         audio.append(entry[entry_columns.index('URI')].replace('H:/Workspace/CalstFiles/WordObjectContent',''))
                 dick_word['audio_'+str(num)] = audio    
-     
+
             words.append(dick_word)
+            if str(bin) in group_word:
+                group_word[str(bin)].append(dick_word)
+            else:
+                group_word[str(bin)] = []
+                group_word[str(bin)].append(dick_word)
+           
 
         dick['MP_nonwords'] = words
+        dick['Groups_of_singles'] = group_word
         
         #import json
         #with open('result.json', 'w') as fp:
@@ -708,7 +724,7 @@ def main(collection_name, course_folder):
 if __name__ == "__main__":
    
     language='Spanish'
-    dbname = get_database('calst_new_system')
+    dbname = get_database('calst_new_system_bin')
     collection_name = dbname['Spanish (Castilian)']
     #collection_name = dbname['testlang']
     output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'

@@ -79,6 +79,10 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
     dick['Position']=""
     dick['Type'] =""
     dick['Type_description'] = ""
+    dick['Target_IPA'] = []
+    dick['Sidekick'] = [] 
+    dick['Exercise_information'] = None
+
 
     extra=[]
     known = []
@@ -101,6 +105,9 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
         if len(ipas) == 4:
             dick['Position'] = ipas[-1]
         print(dick)
+        ipos = dick["Exercise_name"].split(' ')
+        print(ipos)
+        dick['Sidekick'] = ipos[2]
         
         #find group name in this case
         print(min_col, min_row,max_col,max_row)
@@ -113,6 +120,8 @@ def work_with_line_in_structure_lessons(line,course_sheet, course_path, cursor):
                 print(cell.value, 'Group_exercise')
                 dick['Group_lesson'] = cell.value
             current_row -= 1
+        for ipa in dick["Group_lesson"].split('/'):
+            dick['Target_IPA'].append(ipa)
     elif level[-2] != None:
         #dick["Exercise name"] =  level[-2]
         pass
@@ -513,7 +522,7 @@ def main(cursor, collection_name, course_folder):
                 dictionary['Category'] = 'Consonants'
             else:
                 dictionary['Category'] = 'Vowels'
-
+            dictionary['Excel_weight'] = line[-1]
             print(dictionary)
             cell_action.value = 'submitted'
             wb_structure.save(structure_file)
@@ -552,7 +561,7 @@ if __name__ == "__main__":
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+'; UID='+username+';PWD='+ password)
     cursor = cnxn.cursor()
     language='English'
-    dbname = get_database('calst_new_test')
+    dbname = get_database('calst_new_system_bin')
     collection_name = dbname[language]
     #collection_name = dbname['italian_test_nonword']
     output_sound = r'C:\Source\Repos\CalstEnglish\CalstFiles\WordObjectContent'+'\\'+language+r'\OriginalWords_Wav'
